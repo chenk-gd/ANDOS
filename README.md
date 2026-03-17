@@ -1,14 +1,14 @@
-# AI-Native DevOps Platform (ANDOS)
+# ANDOS - AI-Native DevOps System
 
 <p align="center">
-  <strong>AI驱动的全生命周期资产管理平台</strong>
+  <strong>AI原生的DevOps平台</strong>
 </p>
 
 <p align="center">
   <a href="#特性">特性</a> •
   <a href="#快速开始">快速开始</a> •
+  <a href="#项目结构">项目结构</a> •
   <a href="#api文档">API文档</a> •
-  <a href="#agent生态">Agent生态</a> •
   <a href="#架构">架构</a>
 </p>
 
@@ -20,19 +20,18 @@
 - [特性](#特性)
 - [技术栈](#技术栈)
 - [快速开始](#快速开始)
+- [项目结构](#项目结构)
 - [API文档](#api文档)
-- [Agent生态](#agent生态)
-- [架构](#架构)
 - [开发](#开发)
+- [测试](#测试)
 - [部署](#部署)
-- [贡献](#贡献)
 - [许可证](#许可证)
 
 ---
 
 ## 🎯 简介
 
-ANDOS (AI-Native DevOps System) 是一个 **AI原生的全生命周期资产管理平台**，实现项目资产的版本化管理、依赖追踪和智能影响分析。
+ANDOS 是一个 **AI原生的DevOps台**，通过对项目资产的版本化管理、依赖追踪和智能影响分析，实现人+智能体的协同开发
 
 ### 核心概念
 
@@ -40,57 +39,53 @@ ANDOS (AI-Native DevOps System) 是一个 **AI原生的全生命周期资产管�
 - **版本 (Version)**: 精确版本锁定，语义化版本控制
 - **依赖 (Dependency)**: DAG 有向无环图，自动状态传播
 - **Agent**: AI 助手，支持需求分析、设计生成、代码编写、测试生成
+- **组织 (Organization)**: 多租户支持，层级组织结构（最多3层）
 
 ---
 
 ## ✨ 特性
 
-### 核心平台 (V1.0)
+### 核心平台
 
-- ✅ **软删除机制** - PostgreSQL 原生支持，支持删除后恢复
-- ✅ **表分区** - 按月分区，支持大规模数据
-- ✅ **ltree 物化路径** - 高效的依赖图查询
-- ✅ **RESTful API** - 36 个端点，完整的 CRUD 支持
-- ✅ **幂等性** - `Idempotency-Key` 头部支持
-- ✅ **限流控制** - 分级限流 (匿名/用户/付费/内部)
-- ✅ **字段过滤** - 稀疏字段集，减少数据传输
+| 特性 | 说明 |
+|------|------|
+| ✅ **资产管理** | 完整的 CRUD、软删除/恢复、状态机管理 |
+| ✅ **版本控制** | 语义化版本、精确锁定、版本对比 |
+| ✅ **DAG 依赖** | 有向无环图依赖、自动环检测、影响分析 |
+| ✅ **ltree 物化路径** | PostgreSQL ltree 扩展高效查询依赖关系 |
+| ✅ **组织与 RBAC** | 多租户、层级组织、角色权限控制 |
+| ✅ **Webhook 系统** | 事件订阅与推送、投递重试 |
+| ✅ **幂等性** | `Idempotency-Key` 头部支持 |
+| ✅ **限流控制** | 分级限流（匿名/用户/付费/内部） |
+| ✅ **字段过滤** | 稀疏字段集，减少数据传输 |
+| ✅ **表分区** | 按月分区，支持大规模数据 |
 
-### Agent 生态 (V1.0-V1.5)
+### Agent 生态
 
-| Agent | 功能 | 版本 |
+| Agent | 功能 | 状态 |
 |-------|------|------|
-| **RequirementAgent** | 需求分析、规格生成 | V1.0 |
-| **DesignAgent** | 系统设计、架构设计 | V1.0 |
-| **TaskAgent** | 任务拆分、Sprint 规划 | V1.0 |
-| **CodeAgent** | 代码生成、代码审查 | V1.5 |
-| **TestAgent** | 测试生成、覆盖率分析 | V1.5 |
-| **CompatibilityAgent** | 发布前兼容性检查 | V1.5 |
-| **ImpactAgent** | 发布后影响分析 | V1.5 |
+| **RequirementAgent** | 需求分析、规格生成 | ✅ |
+| **DesignAgent** | 系统设计、架构设计 | ✅ |
+| **TaskAgent** | 任务拆分、Sprint 规划 | ✅ |
+| **CodeAgent** | 代码生成、代码审查 | ✅ |
+| **TestAgent** | 测试生成、覆盖率分析 | ✅ |
+| **CompatibilityAgent** | 发布前兼容性检查 | ✅ |
+| **ImpactAgent** | 发布后影响分析 | ✅ |
 
-### 增强功能 (V1.5)
+### 增强功能
 
 - ✅ **大上下文存储** - 超过 100KB 自动存 S3/MinIO
-- ✅ **Agent Service 框架** - 完整的 Agent 生命周期管理
-- ✅ **权限控制** - 工具级权限 (allow/ask/deny)
+- ✅ **Agent Memory API** - V1.5 记忆系统（工作记忆/长期记忆）
+- ✅ **权限控制** - 工具级权限（allow/ask/deny）
 - ✅ **Claude API 集成** - 支持 Claude 3.5 Sonnet
-- ✅ **可视化依赖图谱** - DAG 图可视化 API (Cytoscape/Mermaid/DOT)
-- ✅ **Webhook 系统** - 事件订阅与推送
-- ✅ **兼容性检查** - 发布前自动检测 breaking changes
-- ✅ **影响分析** - 发布后下游资产影响评估
-
-### 规划功能 (V2.0)
-
-- ⏳ **Webhook 系统** - 事件订阅与推送
-- ⏳ **可视化依赖图谱** - 交互式 DAG 展示
-- ⏳ **GraphQL API** - 灵活查询接口
-- ⏳ **CompatibilityAgent** - 发布前兼容性检查
-- ⏳ **ImpactAgent** - 发布后影响分析
+- ✅ **可视化依赖图谱** - DAG 图可视化（Cytoscape）
+- ✅ **Web UI** - Vue 3 + Element Plus 管理界面
 
 ---
 
 ## 🛠️ 技术栈
 
-### 后端
+### 后端 (`apps/server`)
 
 | 技术 | 用途 | 版本 |
 |------|------|------|
@@ -101,20 +96,19 @@ ANDOS (AI-Native DevOps System) 是一个 **AI原生的全生命周期资产管�
 | **Knex.js** | SQL 构建器 | 3.1+ |
 | **Redis** | 缓存/限流 | 7+ |
 | **S3/MinIO** | 对象存储 | - |
+| **Claude API** | AI 对话与生成 | - |
 
-### AI/ML
+### 前端 (`apps/web`)
 
-| 技术 | 用途 |
-|------|------|
-| **Claude API** | AI 对话与生成 |
-| **Anthropic SDK** | 官方客户端 |
-
-### 基础设施
-
-| 技术 | 用途 |
-|------|------|
-| **Docker** | 容器化 |
-| **Git** | 版本控制 |
+| 技术 | 用途 | 版本 |
+|------|------|------|
+| **Vue 3** | 前端框架 | 3.4+ |
+| **TypeScript** | 开发语言 | 5.3+ |
+| **Vite** | 构建工具 | 5.0+ |
+| **Element Plus** | UI 组件库 | 2.5+ |
+| **Pinia** | 状态管理 | 2.1+ |
+| **Cytoscape** | 图谱可视化 | 3.28+ |
+| **Monaco Editor** | 代码编辑器 | 0.45+ |
 
 ---
 
@@ -123,9 +117,9 @@ ANDOS (AI-Native DevOps System) 是一个 **AI原生的全生命周期资产管�
 ### 环境要求
 
 - Node.js >= 18
-- PostgreSQL >= 14
+- PostgreSQL >= 14（需启用 ltree 扩展）
 - Redis >= 7
-- S3/MinIO (可选，用于大上下文存储)
+- S3/MinIO（可选，用于大上下文存储）
 
 ### 安装
 
@@ -138,11 +132,11 @@ cd andos
 npm install
 
 # 配置环境变量
-cp .env.example .env
+cp apps/server/.env.example apps/server/.env
 # 编辑 .env 配置数据库、Redis、S3 等信息
 ```
 
-### 配置环境变量
+### 环境变量配置
 
 ```env
 # 数据库
@@ -156,7 +150,7 @@ DB_PASSWORD=your_password
 REDIS_HOST=localhost
 REDIS_PORT=6379
 
-# S3 (可选)
+# S3/MinIO（可选）
 S3_ENDPOINT=http://localhost:9000
 S3_ACCESS_KEY_ID=minio
 S3_SECRET_ACCESS_KEY=minio123
@@ -165,7 +159,7 @@ S3_BUCKET_NAME=andos-contexts
 # Claude API
 ANTHROPIC_API_KEY=your_api_key
 
-# JWT (可选)
+# JWT
 JWT_SECRET=your_jwt_secret
 
 # 服务器
@@ -181,20 +175,67 @@ npm run db:migrate
 
 # 回滚
 npm run db:rollback
+
+# 种子数据
+npm run db:seed
 ```
 
 ### 启动服务
 
 ```bash
-# 开发模式
+# 同时启动前后端（开发模式）
 npm run dev
 
-# 生产模式
-npm run build
-npm start
+# 单独启动后端
+npm run dev:server
+
+# 单独启动前端
+npm run dev:web
 ```
 
-服务将在 `http://localhost:3000` 启动。
+- API 服务: `http://localhost:3000`
+- Web 界面: `http://localhost:5173`
+
+---
+
+## 📁 项目结构
+
+```
+andos/
+├── apps/
+│   ├── server/              # Fastify 后端 API
+│   │   ├── src/
+│   │   │   ├── agents/      # Agent 实现
+│   │   │   ├── db/          # 数据库连接和迁移
+│   │   │   ├── middleware/  # 认证中间件
+│   │   │   ├── plugins/     # Fastify 插件
+│   │   │   ├── routes/      # API 路由
+│   │   │   ├── services/    # 业务逻辑服务
+│   │   │   ├── types/       # TypeScript 类型
+│   │   │   └── utils/       # 工具函数
+│   │   ├── tests/
+│   │   │   ├── unit/        # 单元测试
+│   │   │   └── integration/ # 集成测试
+│   │   └── package.json
+│   └── web/                 # Vue 3 前端
+│       ├── src/
+│       │   ├── components/  # Vue 组件
+│       │   ├── views/       # 页面视图
+│       │   ├── stores/      # Pinia 状态
+│       │   ├── api/         # API 客户端
+│       │   └── utils/       # 工具函数
+│       └── package.json
+├── packages/
+│   └── shared-errors/       # 共享错误类型
+├── database/
+│   └── migrations/          # 数据库迁移文件
+├── docs/
+│   ├── architecture/        # 架构文档
+│   ├── guides/              # 使用指南
+│   ├── operations/          # 运维文档
+│   └── plans/               # 设计文档和规划
+└── package.json             # Monorepo 根配置
+```
 
 ---
 
@@ -203,7 +244,7 @@ npm start
 ### 基础信息
 
 - **Base URL**: `http://localhost:3000/v1`
-- **认证**: Bearer Token (可选)
+- **认证**: Bearer Token
 - **内容类型**: `application/json`
 
 ### 端点概览
@@ -216,22 +257,17 @@ npm start
 | **Assets** | `/v1/assets/:id/restore` | POST | 恢复已删除资产 |
 | **Assets** | `/v1/assets/:id/transition` | POST | 状态转换 |
 | **Assets** | `/v1/assets/:id/versions` | GET | 获取版本列表 |
-| **Assets** | `/v1/assets/:id/dependencies/*` | GET | 获取依赖关系 |
-| **Assets** | `/v1/assets/:id/descendants` | GET | 获取下游资产 (ltree) |
-| **Assets** | `/v1/assets/:id/ancestors` | GET | 获取上游资产 (ltree) |
-| **Assets** | `/v1/assets/:id/graph` | GET | 获取依赖图谱 (多种格式) |
+| **Assets** | `/v1/assets/:id/graph` | GET | 获取依赖图谱 |
 | **Assets** | `/v1/assets/:id/impact` | GET | 获取影响分析 |
-| **Assets** | `/v1/assets/:id/graph/export` | GET | 导出图谱 (Mermaid/DOT/JSON) |
 | **Dependencies** | `/v1/dependencies` | POST/DELETE | 创建/删除依赖 |
-| **Agents** | `/v1/agents` | GET/POST | Agent 列表/创建 |
-| **Agents** | `/v1/agents/:slug/sessions` | POST | 创建会话 |
+| **Agents** | `/v1/agents` | GET/POST | Agent 管理 |
 | **Agents** | `/v1/agents/:slug/executions` | POST | 创建执行 |
 | **Agents** | `/v1/agents/executions/:id/run` | POST | 执行 Agent |
-| **Webhooks** | `/v1/webhooks` | GET/POST | Webhook 订阅管理 |
-| **Webhooks** | `/v1/webhooks/:id` | GET/PATCH/DELETE | 订阅操作 |
-| **Webhooks** | `/v1/webhooks/:id/deliveries` | GET | 投递历史 |
-| **Webhooks** | `/v1/webhooks/deliveries/:id/retry` | POST | 重试投递 |
-| **Webhooks** | `/v1/webhooks/stats` | GET | 统计信息 |
+| **Agents** | `/v1/agents/:slug/memory` | GET/POST | Agent 记忆管理 |
+| **Webhooks** | `/v1/webhooks` | GET/POST | Webhook 订阅 |
+| **Organizations** | `/v1/orgs` | GET/POST | 组织管理 |
+| **Projects** | `/v1/projects` | GET/POST | 项目管理 |
+| **Users** | `/v1/users` | GET/POST | 用户管理 |
 
 ### 示例请求
 
@@ -257,207 +293,51 @@ curl -X POST http://localhost:3000/v1/assets \
 curl -X POST http://localhost:3000/v1/agents/design-agent/executions \
   -H "Content-Type: application/json" \
   -d '{
-    "execution_id": "exec-001",
     "source_asset_id": "req-xxx",
     "trigger_event_type": "design.requested"
   }'
-```
-
-#### 执行 Agent
-
-```bash
-curl -X POST http://localhost:3000/v1/agents/executions/exec-001/run \
-  -H "Content-Type: application/json" \
-  -d '{
-    "prompt": "根据需求生成系统设计",
-    "max_tokens": 4096
-  }'
-```
-
----
-
-## 🤖 Agent生态
-
-### Agent 类型
-
-| 类型 | 说明 | 触发方式 |
-|------|------|----------|
-| **Primary** | 主助手，用户直接交互 | 手动触发 |
-| **Subagent** | 专项代理，处理特定任务 | `@name` 调用 |
-
-### Agent 配置
-
-Agent 支持通过 `SKILL.md` 或 API 配置：
-
-```yaml
-# SKILL.md 示例
----
-name: design-agent
-description: 系统设计专家
-mode: primary
-model: anthropic/claude-3-5-sonnet-20241022
-temperature: 0.2
-tools:
-  - fetch_asset
-  - query_dag
-  - create_design
-permissions:
-  read: allow
-  write: allow
-  bash:
-    "git *": allow
-    "*": deny
----
-```
-
-### 初始化 Agent
-
-```typescript
-import { initializeAllAgents } from './src/agents';
-
-// 应用启动时初始化
-await initializeAllAgents();
-```
-
----
-
-## 🏗️ 架构
-
-### 系统架构
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        Client Layer                          │
-├─────────────────────────────────────────────────────────────┤
-│  Web UI / CLI / IDE Plugins                                  │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                        API Gateway                           │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
-│  │  Fastify    │  │   Rate      │  │   Idempotency       │ │
-│  │  Server     │  │   Limit     │  │   Middleware        │ │
-│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                        Service Layer                         │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │ AssetService │  │ AgentService │  │ PartitionService │  │
-│  └──────────────┘  └──────────────┘  └──────────────────┘  │
-│  ┌────────────────────────────────────────────────────────┐ │
-│  │          AgentExecutionEngine (Claude API)             │ │
-│  └────────────────────────────────────────────────────────┘ │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                        Data Layer                          │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
-│  │  PostgreSQL  │  │    Redis     │  │   S3/MinIO       │  │
-│  │  (Core)      │  │  (Cache)     │  │  (Context)       │  │
-│  └──────────────┘  └──────────────┘  └──────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
-```
-
-### 数据库架构
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                      Core Schema                             │
-├─────────────────────────────────────────────────────────────┤
-│  assets          - 资产主表                                   │
-│  asset_versions  - 版本表                                     │
-│  dependencies    - 依赖关系                                   │
-│  asset_paths     - ltree 物化路径                             │
-│  asset_metadata  - 扩展元数据                                 │
-│  asset_state_transitions - 状态变更历史                       │
-│  dirty_sources   - dirty 来源队列                             │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      Agent Schema                            │
-├─────────────────────────────────────────────────────────────┤
-│  agents          - Agent 定义                                 │
-│  agent_sessions  - 会话管理                                   │
-│  agent_executions - 执行记录 (按月分区)                        │
-│  agent_approvals - 审批记录                                   │
-│  skills          - Skill 定义                                 │
-│  agent_skills    - Agent-Skill 关联                           │
-└─────────────────────────────────────────────────────────────┘
-                              │
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      Event Schema                            │
-├─────────────────────────────────────────────────────────────┤
-│  platform_events - 平台事件 (按月分区)                         │
-│  notifications   - 通知记录                                   │
-└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
 ## 💻 开发
 
-### 项目结构
-
-```
-andos/
-├── src/
-│   ├── agents/           # Agent 实现
-│   │   ├── RequirementAgent.ts
-│   │   ├── DesignAgent.ts
-│   │   ├── TaskAgent.ts
-│   │   ├── CodeAgent.ts
-│   │   ├── TestAgent.ts
-│   │   └── index.ts
-│   ├── db/
-│   │   └── connection.ts
-│   ├── plugins/          # Fastify 插件
-│   │   ├── errorHandler.ts
-│   │   ├── idempotency.ts
-│   │   └── rateLimit.ts
-│   ├── routes/           # API 路由
-│   │   ├── assets.ts
-│   │   ├── versions.ts
-│   │   ├── dependencies.ts
-│   │   └── agents.ts
-│   ├── services/         # 业务逻辑
-│   │   ├── AssetService.ts
-│   │   ├── AgentService.ts
-│   │   ├── AgentExecutionEngine.ts
-│   │   ├── PartitionService.ts
-│   │   └── ContextStorageService.ts
-│   ├── types/            # TypeScript 类型
-│   │   ├── asset.ts
-│   │   └── agent.ts
-│   ├── utils/            # 工具函数
-│   │   └── fieldFiltering.ts
-│   └── index.ts          # 入口
-├── database/
-│   └── migrations/       # 数据库迁移
-├── tests/
-│   ├── unit/
-│   └── fixtures/
-├── docs/
-│   └── plans/            # 设计文档
-└── package.json
-```
-
-### 运行测试
+### 常用命令
 
 ```bash
-# 单元测试
-npm run test:unit
+# 开发模式
+npm run dev              # 同时启动前后端
+npm run dev:server       # 单独启动后端
+npm run dev:web          # 单独启动前端
 
-# 集成测试
-npm run test:integration
+# 构建
+npm run build            # 构建所有工作区
+npm run build:server     # 仅构建后端
+npm run build:web        # 仅构建前端
 
-# 覆盖率
-npm run test:coverage
+# 数据库
+npm run db:migrate       # 运行迁移
+npm run db:rollback      # 回滚迁移
+npm run db:seed          # 运行种子
+```
+
+---
+
+## 🧪 测试
+
+```bash
+# 运行所有测试
+npm test
+
+# 后端测试
+cd apps/server
+npm run test:unit        # 单元测试（使用 mock 数据库）
+npm run test:integration # 集成测试（需要 PostgreSQL）
+npm run test:coverage    # 覆盖率报告
+
+# 前端测试
+cd apps/web
+npm run test             # 单元测试
 ```
 
 ---
@@ -469,8 +349,8 @@ npm run test:coverage
 ```yaml
 version: '3.8'
 services:
-  app:
-    build: .
+  api:
+    build: ./apps/server
     ports:
       - "3000:3000"
     environment:
@@ -481,6 +361,13 @@ services:
       - postgres
       - redis
       - minio
+
+  web:
+    build: ./apps/web
+    ports:
+      - "80:80"
+    depends_on:
+      - api
 
   postgres:
     image: postgres:15
@@ -505,29 +392,47 @@ volumes:
   postgres_data:
 ```
 
-### Kubernetes
+---
 
-```yaml
-# k8s/deployment.yaml 示例
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: andos-api
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: andos-api
-  template:
-    metadata:
-      labels:
-        app: andos-api
-    spec:
-      containers:
-      - name: api
-        image: andos/api:latest
-        ports:
-        - containerPort: 3000
+## 🏗️ 架构
+
+### 系统架构
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                        Client Layer                          │
+├─────────────────────────────────────────────────────────────┤
+│  Web UI (Vue 3) / CLI / IDE Plugins                         │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        API Gateway                           │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
+│  │  Fastify    │  │   Rate      │  │   Idempotency       │ │
+│  │  Server     │  │   Limit     │  │   Middleware        │ │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        Service Layer                         │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │ AssetService │  │ AgentService │  │ ProjectService   │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+│  ┌────────────────────────────────────────────────────────┐ │
+│  │          AgentExecutionEngine (Claude API)             │ │
+│  └────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                              │
+                              ▼
+┌─────────────────────────────────────────────────────────────┐
+│                        Data Layer                          │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │  PostgreSQL  │  │    Redis     │  │   S3/MinIO       │  │
+│  │  (Core)      │  │  (Cache)     │  │  (Context)       │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ---
@@ -542,6 +447,8 @@ spec:
 
 - [Fastify](https://www.fastify.io/) - Web 框架
 - [Knex.js](https://knexjs.org/) - SQL 构建器
+- [Vue.js](https://vuejs.org/) - 前端框架
+- [Element Plus](https://element-plus.org/) - UI 组件库
 - [Anthropic](https://www.anthropic.com/) - Claude AI
 
 ---
