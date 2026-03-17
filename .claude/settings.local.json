@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "mcp__plugin_context-mode_context-mode__ctx_execute",
+      "mcp__plugin_context-mode_context-mode__ctx_execute_file",
+      "Bash(find docs:*)",
+      "Bash(grep -r \"P0\\\\|P1\\\\|P2\" ../../docs/ --include=*.md)",
+      "Bash(grep -rn bP[0-9]b ../../docs/ --include=*.md)",
+      "mcp__plugin_context-mode_context-mode__ctx_batch_execute",
+      "Bash(git add:*)"
+    ]
+  }
+}

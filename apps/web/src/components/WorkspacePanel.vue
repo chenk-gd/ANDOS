@@ -22,13 +22,24 @@
       <el-tabs v-model="activeTab" class="workspace-tabs">
         <el-tab-pane label="编辑" name="form">
           <div class="tab-content">
+            <!-- 结构化资产：使用 StructuredEditor -->
+            <StructuredEditor
+              v-if="isStructuredAsset"
+              v-model="structuredContent"
+              :schema="assetSchema"
+              @change="handleStructuredChange"
+              @save="handleStructuredSave"
+              @publish="showPublishDialog = true"
+            />
+            <!-- 代码/流水线资产：使用 TextEditor -->
             <TextEditor
-              v-if="isTextAsset"
+              v-else-if="isTextAsset"
               v-model="assetContent"
               :filename="currentAsset.slug"
               :asset-id="currentAsset.id"
               @save="handleAutoSave"
             />
+            <!-- 其他资产：使用基础表单 -->
             <AssetDetailForm
               v-else
               :asset="currentAsset"
@@ -59,25 +70,14 @@
       </el-tabs>
     </template>
 
-    <el-dialog v-model="showPublishDialog" title="发布新版本" width="500px">
-      <el-form>
-        <el-form-item label="版本号">
-          <el-input v-model="publishForm.version" placeholder="例如: 1.0.0" />
-        </el-form-item>
-        <el-form-item label="变更说明">
-          <el-input
-            v-model="publishForm.changelog"
-            type="textarea"
-            rows="4"
-            placeholder="描述本次变更内容..."
-          />
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="showPublishDialog = false">取消</el-button>
-        <el-button type="primary" @click="handlePublish">发布</el-button>
-      </template>
-    </el-dialog>
+    <!-- 发布版本对话框 -->
+    <PublishVersionDialog
+      v-model="showPublishDialog"
+      :current-asset="currentAsset"
+      :current-content="currentContentForPublish"
+      :previous-content="previousContentForPublish"
+      @publish="handlePublish"
+    />
   </div>
 </template>
 
@@ -89,6 +89,9 @@ import TextEditor from './TextEditor.vue'
 import DagCanvas from './DagCanvas.vue'
 import AssetDetailForm from './AssetDetailForm.vue'
 import VersionHistoryPanel from './VersionHistoryPanel.vue'
+import StructuredEditor from './StructuredEditor.vue'
+import PublishVersionDialog from './PublishVersionDialog.vue'
+import { getAssetSchema, getDefaultContent } from '@/schemas/assetSchemas'
 import { assetsApi } from '@/services/api'
 import { graphApi, type DependencyGraph } from '@/services/graph'
 import type { Asset, AssetState, AssetVersion } from '@/types/asset'
@@ -103,14 +106,40 @@ const activeTab = computed({
   set: (val) => { layoutStore.activeTab = val }
 })
 
+// 资产类型判断
 const isTextAsset = computed(() =>
   currentAsset.value?.type === 'code' || currentAsset.value?.type === 'pipeline'
 )
 
+const isStructuredAsset = computed(() =>
+  currentAsset.value?.type === 'requirement' ||
+  currentAsset.value?.type === 'design' ||
+  currentAsset.value?.type === 'task' ||
+  currentAsset.value?.type === 'test'
+)
+
+// 结构化编辑器相关
+const assetSchema = computed(() => {
+  if (!currentAsset.value) return []
+  return getAssetSchema(currentAsset.value.type)
+})
+
+const structuredContent = ref<Record<string, any>>({})
+const originalStructuredContent = ref('')
+
 const assetContent = ref('')
 const dependencyGraph = ref<DependencyGraph | null>(null)
 const showPublishDialog = ref(false)
-const publishForm = ref({ version: '', changelog: '' })
+
+// 发布对话框内容对比
+const currentContentForPublish = computed(() => {
+  if (isStructuredAsset.value) {
+    return JSON.stringify(structuredContent.value, null, 2)
+  }
+  return assetContent.value
+})
+
+const previousContentForPublish = ref('')
 
 function getStateType(state: AssetState): '' | 'success' | 'warning' | 'info' | 'danger' {
   const map: Record<AssetState, '' | 'success' | 'warning' | 'info' | 'danger'> = {
@@ -128,18 +157,46 @@ function handleAutoSave(content: string) {
   console.log('Auto-save:', content)
 }
 
-async function handlePublish() {
+// 结构化编辑器变更处理
+function handleStructuredChange(data: Record<string, any>) {
+  console.log('Structured content changed:', data)
+}
+
+// 结构化编辑器保存处理
+async function handleStructuredSave(data: Record<string, any>) {
   if (!currentAsset.value) return
   try {
+    // 将结构化数据序列化为 content
+    const content = JSON.stringify(data)
+    await assetsStore.updateAssetContent(currentAsset.value.id, content)
+    ElMessage.success('保存成功')
+  } catch (error) {
+    console.error('Save failed:', error)
+    ElMessage.error('保存失败')
+  }
+}
+
+// 发布版本
+async function handlePublish(data: { version: string; changelog: string; changeTypes: string[] }) {
+  if (!currentAsset.value) return
+  try {
+    // 如果有结构化内容，先保存
+    if (isStructuredAsset.value && structuredContent.value) {
+      const content = JSON.stringify(structuredContent.value)
+      await assetsStore.updateAssetContent(currentAsset.value.id, content)
+    }
+
     await assetsApi.publishVersion(
       currentAsset.value.id,
-      publishForm.value.version,
-      publishForm.value.changelog
+      data.version,
+      data.changelog
     )
     showPublishDialog.value = false
     await assetsStore.selectAsset(currentAsset.value.id)
+    ElMessage.success('版本发布成功')
   } catch (error) {
     console.error('Publish failed:', error)
+    ElMessage.error('发布失败')
   }
 }
 
@@ -194,14 +251,47 @@ function handleVersionRestore(version: AssetVersion) {
 watch(() => currentAsset.value?.id, async (assetId) => {
   if (!assetId) {
     dependencyGraph.value = null
+    structuredContent.value = {}
+    previousContentForPublish.value = ''
     return
   }
-  assetContent.value = `# ${currentAsset.value?.name}\n\nAsset content here...`
+
+  // 初始化内容
+  if (isStructuredAsset.value && currentAsset.value?.content) {
+    try {
+      const parsed = JSON.parse(currentAsset.value.content)
+      structuredContent.value = parsed
+      originalStructuredContent.value = JSON.stringify(parsed)
+    } catch {
+      // 如果解析失败，使用空对象
+      structuredContent.value = getDefaultContent(currentAsset.value.type)
+      originalStructuredContent.value = ''
+    }
+  } else {
+    assetContent.value = currentAsset.value?.content || `# ${currentAsset.value?.name}\n\nAsset content here...`
+  }
+
+  // 加载上游依赖图谱
   try {
     const upstream = await graphApi.getUpstream(assetId, 3)
     dependencyGraph.value = upstream.data
   } catch (error) {
     console.error('Failed to load graph:', error)
+  }
+
+  // 加载上一个版本的内容用于对比
+  try {
+    const versions = await assetsApi.listVersions(assetId)
+    if (versions.data.length > 0) {
+      // 获取最新版本的内容
+      const latestVersion = versions.data[0]
+      previousContentForPublish.value = latestVersion.content || ''
+    } else {
+      previousContentForPublish.value = ''
+    }
+  } catch (error) {
+    console.error('Failed to load previous version:', error)
+    previousContentForPublish.value = ''
   }
 }, { immediate: true })
 </script>

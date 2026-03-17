@@ -77,6 +77,20 @@ export const useAssetsStore = defineStore('assets', () => {
     }
   }
 
+  async function updateAssetContent(id: string, content: string) {
+    const response = await assetsApi.update(id, { content })
+    const updated = response.data
+    // Update in list
+    const index = assets.value.findIndex(a => a.id === updated.id)
+    if (index > -1) {
+      assets.value[index] = updated
+    }
+    // Update current asset if selected
+    if (currentAsset.value?.id === updated.id) {
+      currentAsset.value = updated
+    }
+  }
+
   return {
     assets,
     currentAsset,
@@ -87,5 +101,6 @@ export const useAssetsStore = defineStore('assets', () => {
     selectAsset,
     updateAsset,
     markClean,
+    updateAssetContent,
   }
 })
