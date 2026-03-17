@@ -7,6 +7,8 @@ export interface ChatMessage {
   timestamp: number
   loading?: boolean
   error?: string
+  memoryRefs?: string[]
+  feedback?: 'helpful' | 'not_helpful'
 }
 
 export interface ChatSession {

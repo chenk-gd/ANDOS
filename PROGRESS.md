@@ -1,265 +1,224 @@
-# 开发进度追踪
+# ANDOS 开发进度追踪
 
-## 版本对照说明
-
-设计文档使用 **产品版本 (V1.0, V1.5, V2.0)**，技术文档使用 **优先级标记 (P0, P1, P2)**。
-
-| 产品版本 | 技术优先级 | 主要内容 | 状态 |
-|----------|-----------|----------|------|
-| **V1.0** (12-14周) | P0 + 部分P1 | 核心平台 + Agent框架 + Requirement/Design/Task Agent | ✅ 核心完成 |
-| **V1.5** (14-16周) | P1 + P2 | 可视化图谱 + Code/Test Agent + 审批流 + Webhook Beta + **Agent Memory V1.5** | 🔄 设计中完成，待实现 |
-| **V2.0** (16-20周) | P2 | Real-time Collaboration + GraphQL | ⏳ 设计中完成，待实现 |
-| **V2.5** (20-22周) | P2 | Graph Memory + Organization Memory + Dynamic Forgetting | ⏳ 规划中 |
-| **V3.0** (22-26周) | P3 | Vector Memory + Hybrid Search + 语义检索 | ⏳ 规划中 |
+> 更新日期: 2026-03-17
+> 当前阶段: V1.5 Agent Memory System 完善中
 
 ---
 
-## 当前进行：V1.0 核心平台完成，V1.5 部分完成
+## 项目状态总览
 
-### V1.0 核心平台 (✅ 已完成)
+| 模块 | 版本 | 状态 | 完成度 |
+|------|------|------|--------|
+| **Backend API** | V1.0 | ✅ 已完成 | 100% |
+| **Web UI** | V1.0 | ✅ 已完成 | 100% |
+| **Agent Core** | V1.5 | ✅ 已完成 | 100% |
+| **Agent Memory System** | V1.5 | 🔄 进行中 | 60% |
 
-**数据库层 (P0)**
+---
+
+## 已完成内容 (已归档)
+
+<details>
+<summary>点击展开查看已完成内容</summary>
+
+### V1.0 核心平台
+
+**数据库层**
 - ✅ 软删除机制 (deleted_at + RESTRICT FK)
 - ✅ 表分区 (agent_executions, platform_events)
 - ✅ ltree 路径表
-- ✅ 业务逻辑上移 (AssetService)
+- ✅ DAG 依赖管理
 
-**API 层 (P0)**
-- ✅ Fastify 服务器
+**API 层**
+- ✅ Fastify 服务器 + 中间件
 - ✅ 资产 CRUD API (17端点)
-- ✅ 错误处理中间件
-- ✅ 幂等性支持 (Idempotency-Key)
+- ✅ 版本管理 API
+- ✅ 依赖图谱 API
+- ✅ Agent API (16端点)
+- ✅ Webhook API (8端点)
+- ✅ Organization & RBAC API
+- ✅ 限流与配额 (Redis)
 
-**测试 (P0)**
+**Agent 系统**
+- ✅ RequirementAgent / DesignAgent / TaskAgent
+- ✅ CodeAgent / TestAgent
+- ✅ CompatibilityAgent / ImpactAgent
+- ✅ AgentExecutionEngine (Claude API)
+
+**测试**
 - ✅ Vitest 框架
-- ✅ AssetService 单元测试 (Mock 版本 - 30+ 测试通过)
-- ✅ PartitionService 单元测试
-- ✅ DependencyGraphService 单元测试
-- ✅ WebhookService 单元测试
-- ✅ CompatibilityAgent 单元测试
-- ✅ ImpactAgent 单元测试
-- ⏳ 集成测试 (需要 PostgreSQL)
+- ✅ 核心 Service 单元测试 (30+)
 
-### V1.5 增强功能 (🔄 大部分完成)
+### V1.0 Web UI
 
-**已完成 (P1)**
-- ✅ 大上下文存储 (S3/MinIO)
-- ✅ API 限流与配额 (Redis + 分级限流)
-- ✅ 字段过滤 (稀疏字段集)
+**Phase 1: 项目基础**
+- ✅ Vue 3 + Vite + TypeScript 项目结构
+- ✅ Element Plus 组件库集成
+- ✅ Pinia Store 架构
+- ✅ Vue Router 配置
 
-**已完成 (V1.5: Agent Service 框架)**
-- ✅ AgentService: Agent/Skill/Session/Execution 管理
-- ✅ AgentExecutionEngine: Claude API 集成
-- ✅ 工具注册系统
-- ✅ 权限控制 (allow/ask/deny)
-- ✅ Subagent 上下文继承策略
-- ✅ Agent API 端点 (16 个端点)
+**Phase 2: 资产浏览器**
+- ✅ AssetTree 组件（类型分组 + 状态标记）
+- ✅ AssetCreateDialog 组件
+- ✅ 资产列表展示与选择
 
-**已完成 (V1.0: 核心 Agent)**
-- ✅ RequirementAgent: 需求分析、规格生成
-  * analyzeRequirements: 从用户输入生成需求
-  * generateRequirementSpec: 生成完整规格文档
-- ✅ DesignAgent: 系统设计、架构设计
-  * generateSystemDesign: 从需求生成系统设计
-  * reviewDesign: 设计评审
-  * generateAPISpec: 生成 OpenAPI 规范
-- ✅ TaskAgent: 任务拆分、规划
-  * breakdownIntoTasks: 需求/设计拆分为任务
-  * generateSprintPlan: 生成 Sprint 计划
-  * analyzeTaskDependencies: 分析任务依赖
+**Phase 3: 工作区编辑器**
+- ✅ WorkspacePanel 布局
+- ✅ TextEditor (Monaco Editor)
+- ✅ StructuredEditor (动态表单)
+- ✅ AssetDetailForm (基础表单)
+- ✅ DagCanvas (依赖图谱可视化)
 
-**已完成 (V1.5: Code/Test Agent)**
-- ✅ CodeAgent: 代码生成专家
-  * generateCode: 根据设计生成代码
-  * reviewCode: 代码质量与安全审查
-  * refactorCode: 代码重构
-- ✅ TestAgent: 测试生成专家
-  * generateTestSuite: 生成单元/集成/E2E测试
-  * analyzeCoverage: 测试覆盖率分析
-  * generateTestData: 生成测试数据和mock
-  * reviewTests: 测试质量审查
+**Phase 4: 版本发布**
+- ✅ VersionHistoryPanel 组件
+- ✅ PublishVersionDialog (三步发布流程)
+- ✅ 语义化版本建议
+- ✅ Diff 预览
 
-**已完成 (V1.5: Compatibility/Impact Agent)**
-- ✅ CompatibilityAgent: 发布前兼容性检查 (场景 9.5)
-  * checkCompatibility: 检查接口/schema/API/行为兼容性
-  * checkInterfaceCompatibility: 接口兼容性检查
-  * checkSchemaCompatibility: 数据库schema兼容性检查
-- ✅ ImpactAgent: 发布后影响分析 (场景 9.6)
-  * analyzeImpact: 分析下游资产影响
-  * calculateConfidence: 计算影响置信度
-  * identifyCriticalPaths: 识别关键路径
-
-**已完成 (V1.5: 可视化图谱 API)**
-- ✅ DependencyGraphService: 图谱数据生成
-  * buildGraph: 生成图结构数据
-  * buildCytoscapeGraph: Cytoscape.js格式
-  * buildMermaidGraph: Mermaid格式
-  * buildDotGraph: Graphviz DOT格式
-  * analyzeImpact: 影响分析
-- ✅ Graph Routes: 4个API端点
-  * GET /:id/graph - 获取依赖图谱
-  * GET /:id/impact - 获取影响分析
-  * GET /:id/graph/stats - 获取图谱统计
-  * GET /:id/graph/export - 导出图谱
-
-**已完成 (V1.5: Webhook 系统)**
-- ✅ WebhookService: 订阅管理与事件分发
-  * createSubscription: 创建订阅
-  * triggerEvent: 触发事件
-  * processDeliveries: 处理投递
-  * retryDelivery: 重试失败投递
-- ✅ Webhook Routes: 8个API端点
-  * CRUD订阅管理
-  * 投递历史查询
-  * 重试机制
-  * 统计信息
-- ✅ Database Migration: webhook_subscriptions, webhook_deliveries表
-
-**待开发 (V1.5: Agent Memory System - Session + KV)**
-- ⏳ Session Memory: 检查点机制与恢复
-- ⏳ Project Static Memory: Shared Context存储
-- ⏳ MCP-compatible接口: memory_remember/forget工具
-- ⏳ Auto Memory Extraction: 自动记忆提取 (Claude Code风格)
-- ⏳ File Transparency Layer: Markdown导出与双向同步 (OpenClaw风格)
-
-**待开发 (V2.0: Agent Memory System - Real-time Collaboration)**
-- ⏳ Real-time Collaboration: WebSocket + CRDT同步
-- ⏳ Context Engineering: 动态上下文组装
-- ⏳ Memory Upgrade Workflow: Session→Candidate→Project→Org升级路径
-
-**待开发 (V3.0: Agent Memory System - Vector Memory)**
-- ⏳ Project Dynamic Memory: Vector DB + 语义检索
-- ⏳ Hybrid Search Engine: Vector + BM25 + RRF融合
-- ⏳ Embedding Service: 文本向量化服务
-
-**待开发 (V2.5: Agent Memory System - Graph + Organization)**
-- ⏳ Organization Memory: 继承链与标准管理
-- ⏳ Graph Memory: 依赖关系与影响分析
-- ⏳ Dynamic Forgetting: 智能遗忘与压缩机制
-
-**待开发 (V2.0: 其他规划功能)**
-- ⏳ GraphQL API
-- ⏳ 开放平台完整功能
+</details>
 
 ---
 
-### 任务清单
+## 当前进行: V1.5 Agent Memory System
 
-| 任务 | 状态 | 上次更新 | 分支 |
-|------|------|----------|------|
-| P0: 数据库软删除机制 | ✅ 完成 | 2026-03-13 | feature/p0-database |
-| P0: 表分区立即启用 | ✅ 完成 | 2026-03-13 | feature/p0-database |
-| P0: 业务逻辑上移 | ✅ 完成 | 2026-03-13 | feature/p0-database |
-| P0: API 开发 | ✅ 完成 | 2026-03-13 | feature/p0-database |
-| P1: 大上下文存储 | ✅ 完成 | 2026-03-13 | feature/p1-enhancements |
-| P1: API 限流与配额 | ✅ 完成 | 2026-03-13 | feature/p1-enhancements |
-| P1: 字段过滤 | ✅ 完成 | 2026-03-13 | feature/p1-enhancements |
+### Phase 5: Memory 核心服务 (P0) 🔄 进行中
 
-### P1 完成功能
+#### 5.1 Session Memory Service
+**文件**: `apps/server/src/services/memory/SessionMemoryService.ts`
 
-**1. 大上下文存储 (ContextStorageService)**
-- S3 客户端配置（支持 MinIO）
-- 自动存储策略（超过100KB存S3）
-- storeContext / retrieveContext / deleteContext
-- contextExists / getContextSize
-- storeContextAuto / retrieveContextAuto
+- [ ] 完善会话上下文压缩算法
+- [ ] 实现 Token 使用量追踪和限制
+- [ ] 优化会话历史查询性能
+- [ ] 添加会话持久化到 KV 存储
 
-**2. API 限流与配额 (Rate Limit)**
-- 分级限流：anonymous/user/premium/internal
-- Redis 滑动窗口实现
-- X-RateLimit-* 响应头
-- 429 Too Many Requests 响应
+#### 5.2 KV Memory Service
+**文件**: `apps/server/src/services/memory/KVMemoryService.ts`
 
-**3. 字段过滤 (Field Filtering)**
-- parseFields: 解析 ?fields=name,state
-- filterFields: 对象字段过滤
-- filterNestedResources: 嵌套资源过滤
-- fieldFilteringHook: 自动过滤 hook
-- 支持 ?fields[versions]=version,published_at
+- [ ] 实现 TTL 自动清理机制
+- [ ] 添加命名空间隔离功能
+- [ ] 实现批量操作接口
+- [ ] 优化大值存储（S3 集成）
 
-### API 端点清单
+#### 5.3 Project Static Memory
+**文件**: `apps/server/src/services/memory/ProjectMemoryService.ts`
 
-**Assets (/v1/assets)**
-- GET / - List assets (with filters)
-- GET /:id - Get asset
-- POST / - Create asset (with idempotency)
-- PATCH /:id - Update asset
-- DELETE /:id - Soft delete asset
-- POST /:id/restore - Restore asset
-- GET /deleted - List deleted assets
-- POST /:id/transition - Transition state
-- GET /:id/versions - List versions
-- GET /:id/dependencies/upstream - Get upstream deps
-- GET /:id/dependencies/downstream - Get downstream deps
-- GET /:id/descendants - Get descendants (ltree)
-- GET /:id/ancestors - Get ancestors (ltree)
+- [ ] 实现内存候选池审核流程
+- [ ] 添加项目知识图谱构建
+- [ ] 实现记忆相关性搜索
+- [ ] 添加项目记忆版本控制
 
-**Versions (/v1/assets/:assetId/versions)**
-- POST / - Create version
-- POST /:version/publish - Publish version
-- GET /:version - Get specific version
+#### 5.4 MCP 兼容接口
+**文件**: 新建 `apps/server/src/routes/mcp.ts`
 
-**Dependencies (/v1/dependencies)**
-- POST / - Create dependency
-- DELETE / - Remove dependency
-- GET /upstream/:assetId - Get upstream
-- GET /downstream/:assetId - Get downstream
+- [ ] 实现 MCP Server 基础框架
+- [ ] 添加 Tools 接口 (memory_remember/forget)
+- [ ] 添加 Resources 接口
+- [ ] 添加 Prompts 接口
+- [ ] 实现 SSE 传输层
 
-**1. 软删除机制 (001_create_core_tables.ts)**
-- ✅ deleted_at/deleted_by 字段
-- ✅ 部分唯一索引 uq_asset_slug_active (允许删除后复用 slug)
-- ✅ ON DELETE RESTRICT 外键
-- ✅ 软删除触发器 (清理 dirty_sources)
-- ✅ AssetService 业务层实现
+#### 5.5 Auto Memory Extraction Service
+**文件**: 新建 `apps/server/src/services/AutoMemoryExtractionService.ts`
 
-**2. 表分区启用 (002_create_agent_and_event_tables.ts)**
-- ✅ agent_executions 按月分区 (started_at)
-- ✅ platform_events 按月分区 (published_at)
-- ✅ 预创建 2026 年全年分区
-- ✅ 自动分区管理函数 create_next_month_partitions()
-- ✅ PartitionService 管理工具
+- [ ] 实现后台记忆提取调度器
+- [ ] 添加 LLM 记忆候选识别
+- [ ] 实现候选池存储和管理
+- [ ] 添加用户反馈处理流程
 
-**3. 业务逻辑上移**
-- ✅ AssetService: 软删除、状态机、依赖管理、图查询
-- ✅ PartitionService: 分区创建、归档、统计
-- ✅ 完整 TypeScript 类型定义
+#### 5.6 Memory Routes
+**文件**: `apps/server/src/routes/memory.ts` (已存在 15.7KB)
 
-### 提交记录
+- [ ] 完成所有 Memory API 端点
+- [ ] 添加权限检查
+- [ ] 实现 Rate Limiting
+- [ ] 完善错误处理
 
-```
-6dbcdcd Initial project setup with database migrations
-afd9e2f Add AssetService with soft delete and state management
-```
+### Phase 6: Memory UI 集成 (P1) ⏳ 待开始
 
-### 恢复命令
+#### 6.1 AI Chat Panel 升级
+**文件**: `apps/web/src/components/AiChatPanel.vue`
 
-```bash
-# 切换到工作分支
-git checkout feature/p0-database
-git pull origin feature/p0-database
+- [ ] 集成 Memory 上下文显示
+- [ ] 添加记忆引用高亮
+- [ ] 实现记忆反馈按钮（有用/无用）
+- [ ] 添加会话记忆查看器
 
-# 查看上次提交
-git log --oneline -3
+#### 6.2 Memory 管理界面
+**文件**: 新建 `apps/web/src/components/MemoryManager.vue`
 
-# 继续开发
-npm run dev
-```
+- [ ] 项目记忆列表展示
+- [ ] 记忆审核界面（候选池）
+- [ ] 记忆编辑功能
+- [ ] 记忆搜索和过滤
 
-### 阻塞/注意
+#### 6.3 Agent 会话历史
+**文件**: 新建 `apps/web/src/components/AgentSessionHistory.vue`
 
-1. 外键修改可能影响现有测试数据
-2. 需要先在 staging 环境验证
+- [ ] 会话列表展示
+- [ ] 会话详情查看
+- [ ] 会话恢复功能
+- [ ] Token 使用统计
+
+### Phase 7: 系统完善 (P1) ⏳ 待开始
+
+#### 7.1 Dirty Propagation Webhook
+- [ ] 实现变更事件触发
+- [ ] 添加下游资产自动标记 dirty
+- [ ] 实现 Webhook 重试机制
+
+#### 7.2 Impact Analysis UI
+- [ ] 在 WorkspacePanel 添加影响分析按钮
+- [ ] 展示受影响资产列表
+- [ ] 可视化影响范围
+
+#### 7.3 性能优化
+- [ ] 前端懒加载优化
+- [ ] API 响应缓存
+- [ ] 大数据分页优化
+
+### Phase 8: 测试与文档 (P2) ⏳ 待开始
+
+#### 8.1 测试覆盖
+- [ ] Memory Service 单元测试
+- [ ] Auto Extraction 测试
+- [ ] MCP 接口测试
+- [ ] Web UI E2E 测试
+
+#### 8.2 文档完善
+- [ ] API 文档更新
+- [ ] 架构文档更新
+- [ ] 用户手册编写
+- [ ] 部署指南
 
 ---
 
-## 已完成
+## 里程碑
 
-- [x] 数据库设计文档 v1.1
-- [x] API 设计文档
-- [x] Agent 系统设计文档
-- [x] Agent Memory System 设计文档 (三层架构: Session/Project/Organization)
-- [x] Agent Memory System 设计文档 v1.1 (行业研究对齐: Claude Code/OpenClaw/Mem0/Letta)
-  - [x] 自动记忆提取 (Auto Memory Extraction) - Claude Code风格
-  - [x] 文件透明度层 (File Transparency Layer) - OpenClaw Markdown哲学
-  - [ ] 混合检索引擎 (Hybrid Search) - Vector + BM25 + RRF (延期至 V3.0)
-  - [x] 记忆升级工作流 (Memory Upgrade Workflow) - Session→Candidate→Project→Org
+| 里程碑 | 预计完成 | 关键交付 |
+|--------|----------|----------|
+| Memory Core 完成 | 2026-03-24 | Session/KV/Project Memory 可用 |
+| MCP 接口完成 | 2026-03-31 | 外部工具可集成 |
+| Auto Extraction 完成 | 2026-04-07 | 自动记忆提取上线 |
+| V1.5 发布 | 2026-04-14 | 完整 Memory System |
+| V1.5 UI 完成 | 2026-04-21 | Memory 管理界面 |
+| V2.0 准备 | 2026-05-01 | 测试文档完善 |
+
+---
+
+## 技术债务
+
+1. **代码优化**: `WorkspacePanel.vue` 中状态管理可进一步提取到 Pinia store
+2. **错误处理**: 部分 API 调用缺少统一的错误处理
+3. **类型定义**: 部分 any 类型需要细化
+4. **测试覆盖**: Memory 相关服务测试覆盖率不足
+
+---
+
+## 参考文档
+
+- [实施计划 V2](./plans/implementation-roadmap-v2.md)
+- [Agent Memory System 设计](./plans/2026-03-15-agent-memory-system-v1-5.md)
+- [API 设计文档](./plans/2026-03-13-api-design-mvp.md)
+
+---
+
+*最后更新: 2026-03-17 | 提交: eb9e0da version 0.1, first commit*

@@ -67,6 +67,12 @@
             />
           </div>
         </el-tab-pane>
+
+        <el-tab-pane label="记忆管理" name="memory">
+          <div class="tab-content">
+            <MemoryManager :project-id="currentAsset.projectId || 'default-project'" />
+          </div>
+        </el-tab-pane>
       </el-tabs>
     </template>
 
@@ -91,6 +97,7 @@ import AssetDetailForm from './AssetDetailForm.vue'
 import VersionHistoryPanel from './VersionHistoryPanel.vue'
 import StructuredEditor from './StructuredEditor.vue'
 import PublishVersionDialog from './PublishVersionDialog.vue'
+import MemoryManager from './MemoryManager.vue'
 import { getAssetSchema, getDefaultContent } from '@/schemas/assetSchemas'
 import { assetsApi } from '@/services/api'
 import { graphApi, type DependencyGraph } from '@/services/graph'
