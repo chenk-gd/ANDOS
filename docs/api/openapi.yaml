@@ -1,0 +1,691 @@
+openapi: 3.0.0
+info:
+  title: ANDOS API
+  version: 1.1.0
+  description: AI-Native DevOps System API
+
+servers:
+  - url: https://api.andos.dev/v1
+    description: Production
+  - url: http://localhost:3000/v1
+    description: Development
+
+security:
+  - BearerAuth: []
+
+paths:
+  /assets:
+    get:
+      summary: List assets
+      parameters:
+        - name: project_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [requirement, design, task, code, test, pipeline]
+        - name: state
+          in: query
+          schema:
+            type: string
+            enum: [draft, clean, dirty, archived]
+        - name: cursor
+          in: query
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 20
+            maximum: 100
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Asset'
+                  meta:
+                    type: object
+                    properties:
+                      cursor:
+                        type: string
+                      has_more:
+                        type: boolean
+
+    post:
+      summary: Create asset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAssetRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Asset'
+
+  /assets/{assetId}:
+    get:
+      summary: Get asset detail
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: fields
+          in: query
+          schema:
+            type: string
+        - name: include
+          in: query
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AssetDetail'
+
+    put:
+      summary: Update asset
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: If-Match
+          in: header
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAssetRequest'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Asset'
+
+    delete:
+      summary: Delete asset (soft delete)
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted
+
+  /assets/{assetId}/versions:
+    get:
+      summary: List asset versions
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/AssetVersion'
+
+    post:
+      summary: Publish new version
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PublishVersionRequest'
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AssetVersion'
+
+  /assets/{assetId}/dependencies:
+    get:
+      summary: Get dependencies
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: direction
+          in: query
+          schema:
+            type: string
+            enum: [upstream, downstream]
+          description: Dependency direction
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Dependency'
+
+    post:
+      summary: Create dependency
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDependencyRequest'
+      responses:
+        '201':
+          description: Created
+
+  /graph-queries:
+    post:
+      summary: Submit graph query (async)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GraphQueryRequest'
+      responses:
+        '202':
+          description: Accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      query_id:
+                        type: string
+                      status:
+                        type: string
+                        enum: [queued]
+                      estimated_seconds:
+                        type: integer
+
+  /graph-queries/{queryId}:
+    get:
+      summary: Get graph query result
+      parameters:
+        - name: queryId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      query_id:
+                        type: string
+                      status:
+                        type: string
+                        enum: [queued, processing, completed]
+                      progress:
+                        type: integer
+                      result:
+                        $ref: '#/components/schemas/GraphResult'
+
+  /assets/{assetId}/state:
+    get:
+      summary: Get asset state
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/AssetState'
+
+  /assets/{assetId}/clean:
+    post:
+      summary: Manually clean asset
+      parameters:
+        - name: assetId
+          in: path
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                version:
+                  type: string
+                reason:
+                  type: string
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      previous_state:
+                        type: string
+                      current_state:
+                        type: string
+
+  /dirty-queue:
+    get:
+      summary: Get dirty queue
+      parameters:
+        - name: project_id
+          in: query
+          schema:
+            type: string
+        - name: impact_level
+          in: query
+          schema:
+            type: string
+            enum: [high, medium, low]
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DirtyItem'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Asset:
+      type: object
+      required: [id, name, type, state]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        slug:
+          type: string
+        type:
+          type: string
+          enum: [requirement, design, task, code, test, pipeline]
+        state:
+          type: string
+          enum: [draft, clean, dirty, archived]
+        current_version:
+          type: string
+        project_id:
+          type: string
+        owners:
+          type: array
+          items:
+            type: string
+        tags:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AssetDetail:
+      allOf:
+        - $ref: '#/components/schemas/Asset'
+        - type: object
+          properties:
+            description:
+              type: string
+            versions:
+              type: array
+              items:
+                $ref: '#/components/schemas/AssetVersion'
+            dependencies:
+              type: object
+              properties:
+                upstream:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Dependency'
+                downstream:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/Dependency'
+
+    CreateAssetRequest:
+      type: object
+      required: [name, slug, type, project_id]
+      properties:
+        name:
+          type: string
+        slug:
+          type: string
+        description:
+          type: string
+        type:
+          type: string
+          enum: [requirement, design, task, code, test, pipeline]
+        tags:
+          type: array
+          items:
+            type: string
+        project_id:
+          type: string
+        owners:
+          type: array
+          items:
+            type: string
+
+    UpdateAssetRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        tags:
+          type: array
+          items:
+            type: string
+        owners:
+          type: array
+          items:
+            type: string
+
+    AssetVersion:
+      type: object
+      required: [id, asset_id, version, state]
+      properties:
+        id:
+          type: string
+        asset_id:
+          type: string
+        version:
+          type: string
+        state:
+          type: string
+          enum: [draft, published, deprecated]
+        changelog:
+          type: string
+        content_type:
+          type: string
+          enum: [markdown, code, json]
+        published_at:
+          type: string
+          format: date-time
+        published_by:
+          type: string
+
+    PublishVersionRequest:
+      type: object
+      required: [version, content, changelog]
+      properties:
+        version:
+          type: string
+        content:
+          type: string
+        content_type:
+          type: string
+          enum: [markdown, code, json]
+        changelog:
+          type: string
+        dependencies:
+          type: array
+          items:
+            type: object
+            properties:
+              asset_id:
+                type: string
+              version:
+                type: string
+
+    Dependency:
+      type: object
+      required: [id, source_asset_id, target_asset_id]
+      properties:
+        id:
+          type: string
+        source_asset_id:
+          type: string
+        source_version:
+          type: string
+        target_asset_id:
+          type: string
+        target_version:
+          type: string
+        confirmed_at:
+          type: string
+          format: date-time
+        auto_confirmed:
+          type: boolean
+
+    CreateDependencyRequest:
+      type: object
+      required: [target_asset_id]
+      properties:
+        target_asset_id:
+          type: string
+        target_version:
+          type: string
+        source_version:
+          type: string
+
+    GraphQueryRequest:
+      type: object
+      required: [root_asset_id, direction]
+      properties:
+        root_asset_id:
+          type: string
+        direction:
+          type: string
+          enum: [upstream, downstream]
+        max_depth:
+          type: integer
+          default: 10
+        include_versions:
+          type: boolean
+          default: true
+        analysis_type:
+          type: string
+          enum: [impact, dependency, full]
+
+    GraphResult:
+      type: object
+      properties:
+        nodes:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+              name:
+                type: string
+              type:
+                type: string
+        edges:
+          type: array
+          items:
+            type: object
+            properties:
+              from:
+                type: string
+              to:
+                type: string
+              type:
+                type: string
+        analysis:
+          type: object
+          properties:
+            affected_count:
+              type: integer
+            critical_paths:
+              type: array
+              items:
+                type: array
+                items:
+                  type: string
+
+    AssetState:
+      type: object
+      properties:
+        asset_id:
+          type: string
+        state:
+          type: string
+          enum: [draft, clean, dirty, archived]
+        current_version:
+          type: string
+        upstream_versions:
+          type: object
+          additionalProperties:
+            type: string
+        dirty_sources:
+          type: array
+          items:
+            type: object
+            properties:
+              upstream_asset_id:
+                type: string
+              upstream_version:
+                type: string
+              impact_level:
+                type: string
+                enum: [high, medium, low, none]
+
+    DirtyItem:
+      type: object
+      properties:
+        asset_id:
+          type: string
+        asset_name:
+          type: string
+        asset_type:
+          type: string
+        current_version:
+          type: string
+        state:
+          type: string
+        upstream_asset_id:
+          type: string
+        upstream_name:
+          type: string
+        upstream_version:
+          type: string
+        impact_level:
+          type: string
+          enum: [high, medium, low]
+        hours_waiting:
+          type: number
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: string
+        message:
+          type: string
+        details:
+          type: object
+        request_id:
+          type: string

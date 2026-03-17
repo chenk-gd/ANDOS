@@ -1,0 +1,30 @@
+{
+  "name": "andos",
+  "version": "0.1.0",
+  "description": "AI-Native DevOps Platform",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=apps/server & npm run dev --workspace=apps/web",
+    "dev:server": "npm run dev --workspace=apps/server",
+    "dev:web": "npm run dev --workspace=apps/web",
+    "build": "npm run build --workspaces",
+    "build:server": "npm run build --workspace=apps/server",
+    "build:web": "npm run build --workspace=apps/web",
+    "test": "npm run test:server && npm run test:web",
+    "test:server": "cd apps/server && npx vitest run",
+    "test:web": "cd apps/web && npx vitest run",
+    "db:migrate": "npm run db:migrate --workspace=apps/server",
+    "db:rollback": "npm run db:rollback --workspace=apps/server",
+    "db:seed": "npm run db:seed --workspace=apps/server"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "devDependencies": {
+    "vitest": "^4.1.0"
+  }
+}

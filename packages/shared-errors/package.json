@@ -1,0 +1,15 @@
+{
+  "name": "@andos/shared-errors",
+  "version": "0.1.0",
+  "description": "Shared error types for ANDOS platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "type": "module",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch"
+  },
+  "devDependencies": {
+    "typescript": "^5.3.0"
+  }
+}

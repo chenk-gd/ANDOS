@@ -1,0 +1,33 @@
+:root {
+  /* Layout */
+  --header-height: 48px;
+  --panel-width: 280px;
+  --panel-min-width: 200px;
+  --panel-max-width: 400px;
+
+  /* Colors (Light) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f7fa;
+  --bg-tertiary: #e4e7ed;
+  --text-primary: #303133;
+  --text-secondary: #606266;
+  --text-tertiary: #909399;
+  --border-color: #dcdfe6;
+
+  /* Status Colors */
+  --status-draft: #909399;
+  --status-clean: #67c23a;
+  --status-dirty: #e6a23c;
+  --status-modified: #409eff;
+  --status-archived: #f56c6c;
+}
+
+.dark {
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #252526;
+  --bg-tertiary: #2d2d30;
+  --text-primary: #d4d4d4;
+  --text-secondary: #bbbbbb;
+  --text-tertiary: #858585;
+  --border-color: #3e3e42;
+}

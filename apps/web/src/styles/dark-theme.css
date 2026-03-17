@@ -1,0 +1,12 @@
+.dark .el-header {
+  background-color: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.dark .el-aside {
+  background-color: var(--bg-primary);
+}
+
+.dark .el-main {
+  background-color: var(--bg-secondary);
+}
