@@ -29,23 +29,29 @@ interface MCPRequest {
   jsonrpc: '2.0';
   id: string | number;
   method: string;
-  params?: Record<string, any>;
+  params?: Record<string, unknown>;
 }
 
 interface MCPResponse {
   jsonrpc: '2.0';
   id: string | number;
-  result?: any;
+  result?: unknown;
   error?: {
     code: number;
     message: string;
-    data?: any;
+    data?: unknown;
   };
 }
 
-interface MCPToolCall {
+interface MCPMessage {
+  role: 'system' | 'user' | 'assistant';
+  content: {
+    type: 'text';
+    text: string;
+  };
+}
   name: string;
-  arguments: Record<string, any>;
+  arguments: Record<string, unknown>;
 }
 
 // ============================================================================
@@ -83,7 +89,7 @@ class SSEConnectionManager {
     return this.connections.get(sessionId);
   }
 
-  sendEvent(sessionId: string, event: string, data: any): boolean {
+  sendEvent(sessionId: string, event: string, data: unknown): boolean {
     const reply = this.connections.get(sessionId);
     if (!reply) {
       return false;
@@ -175,7 +181,7 @@ async function handleToolsCall(request: MCPRequest): Promise<MCPResponse> {
   const { name, arguments: args } = validation.data;
 
   try {
-    let result: any;
+    let result: unknown;
 
     switch (name) {
       case 'memory_remember':
@@ -305,7 +311,7 @@ async function handleResourcesRead(request: MCPRequest): Promise<MCPResponse> {
     }
 
     const [, level, id] = match;
-    let content: any;
+    let content: unknown;
 
     switch (level) {
       case 'project':
@@ -432,7 +438,7 @@ async function handlePromptsGet(request: MCPRequest): Promise<MCPResponse> {
 
   try {
     let description: string;
-    let messages: any[];
+    let messages: MCPMessage[];
 
     switch (name) {
       case 'memory_context':
