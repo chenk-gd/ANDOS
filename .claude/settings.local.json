@@ -14,7 +14,8 @@
       "Bash(npx vue-tsc:*)",
       "Bash(npm run:*)",
       "Bash(git reset:*)",
-      "Bash(ping -c 1 github.com)"
+      "Bash(ping -c 1 github.com)",
+      "Bash(npx vitest:*)"
     ]
   }
 }
