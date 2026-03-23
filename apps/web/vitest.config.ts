@@ -11,6 +11,18 @@ export default defineConfig({
     deps: {
       inline: ['element-plus'],
     },
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json', 'html'],
+      exclude: [
+        'node_modules/',
+        'e2e/',
+        '**/*.d.ts',
+        '**/*.config.ts',
+        '**/mock.ts',
+        '**/types/**',
+      ],
+    },
   },
   resolve: {
     alias: [

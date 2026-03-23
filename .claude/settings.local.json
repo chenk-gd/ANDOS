@@ -16,7 +16,9 @@
       "Bash(git reset:*)",
       "Bash(ping -c 1 github.com)",
       "Bash(npx vitest:*)",
-      "Bash(npx tsc:*)"
+      "Bash(npx tsc:*)",
+      "Bash(ls:*)",
+      "Bash(npx playwright:*)"
     ]
   }
 }
