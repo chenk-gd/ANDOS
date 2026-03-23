@@ -131,4 +131,17 @@ process.on('SIGINT', async () => {
   process.exit(0);
 });
 
+// Global error handlers
+process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) => {
+  server.log.error({ reason, promise }, 'Unhandled Rejection');
+});
+
+process.on('uncaughtException', (error: Error) => {
+  server.log.error(error, 'Uncaught Exception');
+  // Graceful shutdown
+  server.close().then(() => {
+    process.exit(1);
+  });
+});
+
 start();

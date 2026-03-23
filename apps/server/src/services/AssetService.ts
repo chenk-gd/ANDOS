@@ -514,7 +514,10 @@ export class AssetService {
         { projectId: asset.project_id }
       );
     } catch (error) {
-      console.error('[AssetService] Failed to trigger dirty webhook:', error);
+      // TODO: Replace with proper logger when available
+      // Silently fail - webhook errors should not affect asset operations
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to trigger dirty webhook: ${errorMessage}`);
     }
   }
 
