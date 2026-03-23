@@ -122,7 +122,7 @@ export class SchedulerService {
    * Start all enabled tasks
    */
   startAll(): void {
-    for (const [name, record] of this.tasks.entries()) {
+    for (const [name, record] of Array.from(this.tasks.entries())) {
       if (record.task.enabled && !record.cronTask) {
         this.startTask(name);
       }
@@ -133,7 +133,7 @@ export class SchedulerService {
    * Stop all tasks
    */
   stopAll(): void {
-    for (const [name, record] of this.tasks.entries()) {
+    for (const [name, record] of Array.from(this.tasks.entries())) {
       if (record.cronTask) {
         this.stopTask(name);
       }
@@ -169,7 +169,6 @@ export class SchedulerService {
         // Continue running - don't stop the scheduler on error
       }
     }, {
-      scheduled: true,
       timezone: 'UTC',
     });
 

@@ -611,7 +611,12 @@ const mcpRoutes: FastifyPluginAsync = async (fastify) => {
       });
     }
 
-    const mcpRequest = validation.data;
+    const mcpRequest: MCPRequest = {
+      jsonrpc: '2.0',
+      id: validation.data.id,
+      method: validation.data.method,
+      params: validation.data.params,
+    };
 
     // Route the request
     const response = await routeMCPRequest(mcpRequest);

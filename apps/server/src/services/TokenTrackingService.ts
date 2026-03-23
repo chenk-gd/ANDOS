@@ -250,7 +250,7 @@ export class TokenTrackingService {
   async getSessionsNeedingCheckpoints(): Promise<string[]> {
     const sessions: string[] = [];
 
-    for (const [sessionId, data] of this.sessionData.entries()) {
+    for (const [sessionId, data] of Array.from(this.sessionData.entries())) {
       const tokensSinceLastCheckpoint = data.totalTokens - data.lastCheckpointTokens;
 
       if (data.checkpointCount === 0 && tokensSinceLastCheckpoint >= this.thresholds.first) {

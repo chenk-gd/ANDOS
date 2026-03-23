@@ -16,6 +16,8 @@ export * from './OrganizationService';
 export * from './PermissionService';
 export * from './ProjectMemoryService';
 export * from './ProjectService';
+export * from './SchedulerService';
 export * from './SessionMemoryService';
+export * from './TokenTrackingService';
 export * from './UserService';
 export * from './WebhookService';
