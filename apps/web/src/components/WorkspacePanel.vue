@@ -264,18 +264,12 @@ watch(() => currentAsset.value?.id, async (assetId) => {
   }
 
   // 初始化内容
-  if (isStructuredAsset.value && currentAsset.value?.content) {
-    try {
-      const parsed = JSON.parse(currentAsset.value.content)
-      structuredContent.value = parsed
-      originalStructuredContent.value = JSON.stringify(parsed)
-    } catch {
-      // 如果解析失败，使用空对象
-      structuredContent.value = getDefaultContent(currentAsset.value.type)
-      originalStructuredContent.value = ''
-    }
+  if (isStructuredAsset.value) {
+    // 结构化资产使用默认内容
+    structuredContent.value = getDefaultContent(currentAsset.value!.type)
+    originalStructuredContent.value = ''
   } else {
-    assetContent.value = currentAsset.value?.content || `# ${currentAsset.value?.name}\n\nAsset content here...`
+    assetContent.value = `# ${currentAsset.value?.name}\n\nAsset content here...`
   }
 
   // 加载上游依赖图谱

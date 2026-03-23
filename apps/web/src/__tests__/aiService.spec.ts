@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { sendMessage, saveApiKey, getStoredApiKey, generateId, type AiModel } from '@/services/ai'
+import { sendMessage, saveApiKey, getStoredApiKey, generateId } from '@/services/ai'
 
 describe('AI Service', () => {
   beforeEach(() => {

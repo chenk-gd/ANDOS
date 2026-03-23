@@ -9,8 +9,6 @@ vi.mock('@/services/api', () => ({
 
 import { request } from '@/services/api'
 
-const API_BASE = 'http://localhost:3000/v1'
-
 describe('Memory API Service', () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -93,6 +91,7 @@ describe('Memory API Service', () => {
         createdAt: '2024-01-01T00:00:00Z',
         updatedAt: '2024-01-01T00:00:00Z',
         createdBy: 'user-1',
+        metadata: { tags: ['important'] },
       }
       vi.mocked(request).mockResolvedValue(mockResponse)
 

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { setActivePinia, createPinia } from 'pinia'
 import { useAssetsStore } from '@/stores/assets'
 import * as apiModule from '@/services/api'
+import type { Asset } from '@/types/asset'
 
 // Mock the API module
 vi.mock('@/services/api', () => ({
@@ -14,7 +15,7 @@ vi.mock('@/services/api', () => ({
 }))
 
 describe('Assets Store', () => {
-  const mockAssets = [
+  const mockAssets: Asset[] = [
     { id: '1', name: 'Asset 1', type: 'requirement', state: 'clean', projectId: 'p1', slug: 'asset-1', currentVersion: '1.0', owners: [], tags: [], createdAt: '', updatedAt: '' },
     { id: '2', name: 'Asset 2', type: 'code', state: 'dirty', projectId: 'p1', slug: 'asset-2', currentVersion: '1.1', owners: [], tags: [], createdAt: '', updatedAt: '' },
     { id: '3', name: 'Asset 3', type: 'design', state: 'draft', projectId: 'p1', slug: 'asset-3', currentVersion: '0.1', owners: [], tags: [], createdAt: '', updatedAt: '' },
@@ -159,7 +160,7 @@ describe('Assets Store', () => {
       const store = useAssetsStore()
       store.assets = [...mockAssets]
 
-      const cleanedAsset = { ...mockAssets[1], state: 'clean' }
+      const cleanedAsset: Asset = { ...mockAssets[1], state: 'clean' }
       vi.mocked(apiModule.assetsApi.markClean).mockResolvedValue({ data: cleanedAsset })
 
       await store.markClean('2')
@@ -173,7 +174,7 @@ describe('Assets Store', () => {
       store.assets = [...mockAssets]
       store.currentAsset = { ...mockAssets[1] }
 
-      const cleanedAsset = { ...mockAssets[1], state: 'clean' }
+      const cleanedAsset: Asset = { ...mockAssets[1], state: 'clean' }
       vi.mocked(apiModule.assetsApi.markClean).mockResolvedValue({ data: cleanedAsset })
 
       await store.markClean('2')

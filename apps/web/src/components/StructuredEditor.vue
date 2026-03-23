@@ -33,7 +33,7 @@
         >
           <div class="array-field">
             <div
-              v-for="(item, index) in formData[field.key] || []"
+              v-for="(_item, index) in formData[field.key] || []"
               :key="index"
               class="array-item"
             >
@@ -258,7 +258,8 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   nested: false,
-  modelValue: () => ({})
+  modelValue: () => ({}),
+  schema: () => []
 })
 
 const emit = defineEmits<{
@@ -316,7 +317,7 @@ const validationRules = computed<FormRules>(() => {
 
     if (field.validator) {
       fieldRules.push({
-        validator: (rule: any, value: any, callback: any) => {
+        validator: (_rule: any, value: any, callback: any) => {
           const result = field.validator!(value)
           if (result === true) {
             callback()

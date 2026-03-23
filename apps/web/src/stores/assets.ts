@@ -77,8 +77,9 @@ export const useAssetsStore = defineStore('assets', () => {
     }
   }
 
-  async function updateAssetContent(id: string, content: string) {
-    const response = await assetsApi.update(id, { content })
+  async function updateAssetContent(id: string, _content: string) {
+    // Content is stored in version, not asset - use markClean or version API
+    const response = await assetsApi.markClean(id)
     const updated = response.data
     // Update in list
     const index = assets.value.findIndex(a => a.id === updated.id)
