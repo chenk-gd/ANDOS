@@ -12,6 +12,7 @@
 |------|------|
 | [平台架构概览](./architecture/platform-overview.md) | 系统整体架构、核心概念、设计原则 |
 | [Agent 系统设计](./architecture/agent-system.md) | Primary/Subagent 架构、Skill 系统、权限模型 |
+| [Agent Memory System](./architecture/agent-memory-system.md) | 记忆系统设计 v1.5，Session/Project/Org 三层记忆 |
 | [数据模型设计](./architecture/data-model.md) | 数据库 Schema、分层模型、查询模式 |
 | [API 设计](./architecture/api-design.md) | REST API 规范、WebSocket 接口 |
 
@@ -20,6 +21,7 @@
 | 文档 | 说明 |
 |------|------|
 | [快速开始](./guides/getting-started.md) | 本地环境搭建、首个 API 调用 |
+| [Memory System 用户指南](./guides/memory-system.md) | 记忆系统使用指南、MCP 集成 |
 
 ### 🚀 运维指南
 
@@ -31,13 +33,14 @@
 
 | 文档 | 说明 |
 |------|------|
-| [OpenAPI 定义](./api/openapi.yaml) | 完整的 OpenAPI 3.0 规范 |
+| [OpenAPI 规范](./api/openapi.json) | 完整的 OpenAPI 3.0.3 规范 (JSON) |
+| [MCP 协议文档](./api/mcp-protocol.md) | Model Context Protocol 接口文档 |
 
 ### 📅 项目规划
 
 | 文档 | 说明 |
 |------|------|
-| [实施路线图](./plans/implementation-roadmap.md) | 各阶段功能计划、技术债务、风险分析 |
+| [实施路线图 v2](./plans/implementation-roadmap-v2.md) | 各阶段功能计划、技术债务、风险分析 (包含 Phase 5-8) |
 
 ---
 
@@ -74,6 +77,7 @@ ANDOS 是一个 AI-Native 资产管理系统，实现项目全生命周期资产
 - **依赖追踪** - DAG 依赖图谱与影响分析
 - **状态管理** - Clean/Dirty 状态传播机制
 - **AI-Agent 集成** - Primary/Subagent 双模式架构
+- **Memory System** - Session/Project/Org 三层记忆系统
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -85,13 +89,17 @@ ANDOS 是一个 AI-Native 资产管理系统，实现项目全生命周期资产
 │  ┌──────────────────────────────────────────────────┐  │
 │  │              API Gateway (Fastify)               │  │
 │  └──────────────────────────────────────────────────┘  │
-│  ┌──────────┐  ┌──────────────┐  ┌──────────────────┐ │
-│  │  Asset   │  │   Agent      │  │   Graph/Impact   │ │
-│  │  Service │  │   Service    │  │   Services       │ │
-│  └──────────┘  └──────────────┘  └──────────────────┘ │
-│  ┌──────────┐  ┌──────────────┐  ┌──────────────────┐ │
-│  │PostgreSQL│  │    Redis     │  │  S3/MinIO        │ │
-│  └──────────┘  └──────────────┘  └──────────────────┘ │
+│  ┌──────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │  Asset   │  │   Agent      │  │   Graph/Impact   │  │
+│  │  Service │  │   Service    │  │   Services       │  │
+│  └──────────┘  └──────────────┘  └──────────────────┘  │
+│  ┌──────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │  Memory  │  │    MCP       │  │   Webhook        │  │
+│  │  Service │  │   Server     │  │   Service        │  │
+│  └──────────┘  └──────────────┘  └──────────────────┘  │
+│  ┌──────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │PostgreSQL│  │    Redis     │  │  S3/MinIO        │  │
+│  └──────────┘  └──────────────┘  └──────────────────┘  │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -161,4 +169,4 @@ Layer 6: pipeline       ← 流水线层（依赖测试）
 
 ---
 
-**Last Updated:** 2026-03-14
+**Last Updated:** 2026-03-23

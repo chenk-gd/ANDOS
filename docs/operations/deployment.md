@@ -391,9 +391,199 @@ const dbConfig = {
 
 ---
 
-## 9. 参考资料
+## 9. MCP 与 Memory System 配置
+
+### 9.1 MCP Server 配置
+
+#### 环境变量
+
+```env
+# MCP Server
+MCP_ENABLED=true
+MCP_SSE_ENDPOINT=/mcp/sse
+MCP_KEEPALIVE_INTERVAL=30000
+MCP_MAX_CONNECTIONS=100
+MCP_SESSION_TIMEOUT=3600000
+
+# Memory System
+MEMORY_SYSTEM_ENABLED=true
+MEMORY_DEFAULT_TTL=604800  # 7 days for session memories
+MEMORY_MAX_CHECKPOINTS=50
+MEMORY_CANDIDATE_REVIEW_ENABLED=true
+```
+
+#### Docker Compose 配置
+
+```yaml
+services:
+  app:
+    environment:
+      - MCP_ENABLED=true
+      - MCP_SSE_ENDPOINT=/mcp/sse
+      - MCP_KEEPALIVE_INTERVAL=30000
+      - MCP_MAX_CONNECTIONS=100
+      - MEMORY_SYSTEM_ENABLED=true
+      - MEMORY_DEFAULT_TTL=604800
+      - MEMORY_MAX_CHECKPOINTS=50
+    # ...
+```
+
+### 9.2 Memory System 数据存储
+
+#### 数据库表分区
+
+```sql
+-- Session 检查点表分区
+CREATE TABLE session_checkpoints_2026_03 PARTITION OF session_checkpoints
+    FOR VALUES FROM ('2026-03-01') TO ('2026-04-01');
+
+-- KV Memory 索引
+CREATE INDEX CONCURRENTLY idx_kv_memories_level_namespace
+    ON kv_memories(level, namespace)
+    WHERE deleted_at IS NULL;
+
+CREATE INDEX CONCURRENTLY idx_kv_memories_project_session
+    ON kv_memories(project_id, session_id)
+    WHERE deleted_at IS NULL;
+
+-- Memory candidates 索引
+CREATE INDEX CONCURRENTLY idx_memory_candidates_status
+    ON memory_candidates(status, created_at)
+    WHERE status = 'pending';
+```
+
+### 9.3 MCP 客户端配置
+
+#### Claude Desktop
+
+```json
+// claude_desktop_config.json
+{
+  "mcpServers": {
+    "andos": {
+      "command": "npx",
+      "args": ["-y", "@andos/mcp-client"],
+      "env": {
+        "ANDOS_URL": "https://your-andos-instance.com",
+        "ANDOS_TOKEN": "your_api_token"
+      }
+    }
+  }
+}
+```
+
+#### Claude Code
+
+```bash
+# 配置 MCP
+export MCP_SSE_URL=http://localhost:3000/mcp/sse
+export MCP_TOKEN=your_api_token
+
+# 启动 with MCP
+claude --mcp-server andos
+```
+
+### 9.4 Memory System 运维
+
+#### 清理过期记忆
+
+```bash
+#!/bin/bash
+# cleanup-memories.sh
+# 清理过期 session memories
+
+curl -X POST http://localhost:3000/v1/memory/cleanup \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "level": "session",
+    "older_than_days": 30,
+    "dry_run": false
+  }'
+```
+
+#### 备份项目记忆
+
+```bash
+#!/bin/bash
+# backup-project-memories.sh
+# 备份特定项目的记忆
+
+PROJECT_ID="proj-xxx"
+BACKUP_DIR="/backup/memories"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+# 导出项目记忆
+curl "http://localhost:3000/v1/memory/projects/$PROJECT_ID/export" \
+  -H "Authorization: Bearer $ADMIN_TOKEN" \
+  > "$BACKUP_DIR/project_${PROJECT_ID}_$DATE.json"
+
+# 压缩
+gzip "$BACKUP_DIR/project_${PROJECT_ID}_$DATE.json"
+
+# 保留最近 30 天
+find $BACKUP_DIR -name "project_*.json.gz" -mtime +30 -delete
+```
+
+#### 监控 Memory System
+
+```yaml
+# Prometheus 规则
+- alert: MCPConnectionsHigh
+  expr: mcp_active_connections > 80
+  for: 5m
+  labels:
+    severity: warning
+  annotations:
+    summary: "MCP connections high"
+    description: "Active MCP connections: {{ $value }}"
+
+- alert: MemoryStorageFull
+  expr: memory_storage_usage_percent > 80
+  for: 5m
+  labels:
+    severity: critical
+  annotations:
+    summary: "Memory storage nearly full"
+    description: "Memory storage usage: {{ $value }}%"
+```
+
+### 9.5 Memory System 性能调优
+
+#### Redis 缓存配置
+
+```conf
+# redis.conf
+# Memory System 专用配置
+maxmemory 2gb
+maxmemory-policy allkeys-lru
+
+# Session 记忆缓存
+tcp-keepalive 60
+```
+
+#### 数据库连接池
+
+```typescript
+// Memory System 专用连接池配置
+const memoryDbConfig = {
+  pool: {
+    min: 2,
+    max: 10,
+    acquireTimeoutMillis: 30000,
+    idleTimeoutMillis: 30000,
+    // Memory queries can be long-running
+    statement_timeout: 60000
+  }
+};
+```
+
+---
+
+## 10. 参考资料
 
 - [快速开始](../guides/getting-started.md)
+- [Memory System 用户指南](../guides/memory-system.md)
 - [平台架构设计](../architecture/platform-overview.md)
 - [数据模型设计](../architecture/data-model.md)
 - [API 设计](../api/openapi.yaml)

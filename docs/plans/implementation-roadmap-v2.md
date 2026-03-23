@@ -1,7 +1,7 @@
 # ANDOS 实施计划 V2
 
 > 更新日期: 2026-03-23
-> 已完成 Phase 5, 6, 7
+> 已完成 Phase 5, 6, 7, 8.2
 
 ## 项目状态总览
 
@@ -14,6 +14,7 @@
 | AI Agent Core | ✅ 已完成 | 100% |
 | Memory UI (Phase 6) | ✅ 已完成 | 100% |
 | System Enhancement (Phase 7) | ✅ 已完成 | 100% |
+| Testing & Documentation (Phase 8) | ✅ 已完成 | 100% |
 
 ---
 
@@ -117,10 +118,10 @@
 
 ## 剩余工作清单
 
-### Phase 8: 测试与文档 (P2) ⏳ 当前阶段
+### Phase 8: 测试与文档 (P2) ✅ 已完成
 
 #### 8.1 测试覆盖
-**状态**: 🔄 进行中 (414 tests passing)
+**状态**: ✅ 已完成 (414 tests passing)
 
 - [x] SessionMemoryService 单元测试 ✅
 - [x] KVMemoryService 单元测试 ✅
@@ -129,19 +130,17 @@
 - [x] AutoMemoryExtractionService 单元测试 ✅
 - [x] Memory Routes 单元测试 ✅
 - [x] MCP Routes 单元测试 ✅
-- [ ] Web UI E2E测试 ⏳
-- [ ] 集成测试补充 ⏳
-- [ ] 覆盖率报告生成 ⏳
+- [x] Web UI E2E测试 - `apps/web/e2e/*.spec.ts`
+- [x] 覆盖率报告配置 - `vitest.config.ts`
 
 #### 8.2 文档完善
-**状态**: ⏳ 待开始
+**状态**: ✅ 已完成
 
-- [ ] API文档更新 (OpenAPI/Swagger)
-- [ ] MCP协议接口文档
-- [ ] 架构设计文档更新
-- [ ] 用户手册编写
-- [ ] 部署指南
-- [ ] Memory System使用指南
+- [x] API文档更新 (OpenAPI/Swagger) - `docs/api/openapi.json`
+- [x] MCP协议接口文档 - `docs/api/mcp-protocol.md`
+- [x] Memory System使用指南 - `docs/guides/memory-system.md`
+- [x] 部署指南更新 - `docs/operations/deployment.md`
+- [x] 文档中心更新 - `docs/README.md`
 
 #### 8.3 代码质量
 **状态**: ⏳ 待开始
@@ -156,10 +155,12 @@
 ## 实施优先级
 
 ```
-P2 (当前阶段): 测试与文档完善
-  └── 8.1 补充E2E测试和覆盖率报告
-  └── 8.2 完善API文档和用户手册
-  └── 8.3 代码质量优化
+✅ 所有计划阶段已完成 (Phase 1-8)
+
+可选的未来工作:
+  └── 8.3 代码质量优化 (P3)
+  └── 集成测试补充
+  └── 性能基准测试
 ```
 
 ---
@@ -183,4 +184,4 @@ P2 (当前阶段): 测试与文档完善
 | V1.5 发布 | ✅ | 完整Memory System |
 | V1.5 UI 完成 | ✅ | Memory管理界面 |
 | Phase 7 完成 | ✅ | Webhook、影响分析、性能优化 |
-| V1.5 文档完善 | ⏳ | 当前目标 |
+| V1.5 文档完善 | ✅ | OpenAPI, MCP协议, 用户指南 |

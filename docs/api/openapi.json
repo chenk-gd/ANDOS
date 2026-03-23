@@ -1,0 +1,801 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "ANDOS API",
+    "description": "AI-Native DevOps System API - Asset management with version control, dependency tracking, and intelligent memory system",
+    "version": "1.5.0",
+    "contact": {
+      "name": "ANDOS Team"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000/v1",
+      "description": "Development server"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Assets",
+      "description": "Asset management operations"
+    },
+    {
+      "name": "Versions",
+      "description": "Asset version management"
+    },
+    {
+      "name": "Dependencies",
+      "description": "Asset dependency graph operations"
+    },
+    {
+      "name": "Memory",
+      "description": "Agent Memory System operations"
+    },
+    {
+      "name": "MCP",
+      "description": "Model Context Protocol endpoints"
+    },
+    {
+      "name": "Webhooks",
+      "description": "Webhook subscription management"
+    }
+  ],
+  "paths": {
+    "/assets": {
+      "get": {
+        "tags": ["Assets"],
+        "summary": "List assets",
+        "description": "Get a list of assets with optional filters",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "schema": { "type": "string" },
+            "description": "Filter by project ID"
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["requirement", "design", "task", "code", "test", "pipeline"] },
+            "description": "Filter by asset type"
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["draft", "clean", "dirty", "modified", "archived"] },
+            "description": "Filter by asset state"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of assets",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/Asset" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Assets"],
+        "summary": "Create asset",
+        "description": "Create a new asset",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateAssetInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Asset created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Asset" }
+              }
+            }
+          },
+          "400": { "description": "Invalid input" },
+          "409": { "description": "Duplicate slug" }
+        }
+      }
+    },
+    "/assets/{id}": {
+      "get": {
+        "tags": ["Assets"],
+        "summary": "Get asset",
+        "description": "Get asset by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asset details",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Asset" }
+              }
+            }
+          },
+          "404": { "description": "Asset not found" }
+        }
+      },
+      "put": {
+        "tags": ["Assets"],
+        "summary": "Update asset",
+        "description": "Update asset by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/UpdateAssetInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Asset updated",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Asset" }
+              }
+            }
+          },
+          "404": { "description": "Asset not found" }
+        }
+      },
+      "delete": {
+        "tags": ["Assets"],
+        "summary": "Delete asset",
+        "description": "Soft delete asset by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "204": { "description": "Asset deleted" },
+          "404": { "description": "Asset not found" }
+        }
+      }
+    },
+    "/assets/{id}/versions": {
+      "get": {
+        "tags": ["Versions"],
+        "summary": "List versions",
+        "description": "Get all versions of an asset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of versions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "array",
+                      "items": { "$ref": "#/components/schemas/AssetVersion" }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Versions"],
+        "summary": "Create version",
+        "description": "Create a new version for an asset",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateVersionInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Version created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/AssetVersion" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/assets/{id}/mark-clean": {
+      "post": {
+        "tags": ["Assets"],
+        "summary": "Mark asset as clean",
+        "description": "Transition asset from dirty/modified to clean state",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Asset marked as clean",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Asset" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/dependencies": {
+      "get": {
+        "tags": ["Dependencies"],
+        "summary": "Get dependencies",
+        "description": "Get upstream or downstream dependencies",
+        "parameters": [
+          {
+            "name": "assetId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["upstream", "downstream"] }
+          },
+          {
+            "name": "depth",
+            "in": "query",
+            "schema": { "type": "integer", "default": 3 }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Dependency graph",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/DependencyGraph" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories": {
+      "get": {
+        "tags": ["Memory"],
+        "summary": "List memories",
+        "description": "Get memories with filters",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "type",
+            "in": "query",
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["active", "archived"] }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of memories",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/Memory" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Memory"],
+        "summary": "Create memory",
+        "description": "Create a new memory",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateMemoryInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Memory created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/Memory" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/search": {
+      "post": {
+        "tags": ["Memory"],
+        "summary": "Search memories",
+        "description": "Search memories by query text",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/SearchMemoryInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Search results",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/MemorySearchResult" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/candidates": {
+      "get": {
+        "tags": ["Memory"],
+        "summary": "List memory candidates",
+        "description": "Get pending memory candidates for review",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": { "type": "string", "enum": ["pending", "approved", "rejected"] }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of candidates",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/MemoryCandidate" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memories/candidates/review": {
+      "post": {
+        "tags": ["Memory"],
+        "summary": "Review candidate",
+        "description": "Approve, reject, or edit a memory candidate",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ReviewCandidateInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Review processed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MemoryCandidate" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/memory/sessions": {
+      "get": {
+        "tags": ["Memory"],
+        "summary": "List sessions",
+        "description": "Get agent sessions for a project",
+        "parameters": [
+          {
+            "name": "projectId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of sessions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/SessionMemory" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Memory"],
+        "summary": "Create session",
+        "description": "Create a new agent session",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateSessionInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Session created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/SessionMemory" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/mcp/sse": {
+      "get": {
+        "tags": ["MCP"],
+        "summary": "MCP SSE endpoint",
+        "description": "Server-Sent Events endpoint for MCP protocol",
+        "responses": {
+          "200": {
+            "description": "SSE connection established"
+          }
+        }
+      }
+    },
+    "/mcp/messages": {
+      "post": {
+        "tags": ["MCP"],
+        "summary": "MCP message endpoint",
+        "description": "Receive MCP protocol messages",
+        "parameters": [
+          {
+            "name": "sessionId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/MCPRequest" }
+            }
+          }
+        },
+        "responses": {
+          "202": { "description": "Message accepted, response via SSE" },
+          "404": { "description": "Session not found" }
+        }
+      }
+    },
+    "/webhooks": {
+      "get": {
+        "tags": ["Webhooks"],
+        "summary": "List webhooks",
+        "description": "Get webhook subscriptions",
+        "responses": {
+          "200": {
+            "description": "List of webhooks",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": { "$ref": "#/components/schemas/WebhookSubscription" }
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Webhooks"],
+        "summary": "Create webhook",
+        "description": "Subscribe to webhook events",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/CreateWebhookInput" }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Webhook created",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/WebhookSubscription" }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Asset": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "type": { "type": "string", "enum": ["requirement", "design", "task", "code", "test", "pipeline"] },
+          "state": { "type": "string", "enum": ["draft", "clean", "dirty", "modified", "archived"] },
+          "project_id": { "type": "string" },
+          "current_version": { "type": "string" },
+          "owners": { "type": "array", "items": { "type": "string" } },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "created_at": { "type": "string", "format": "date-time" },
+          "updated_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateAssetInput": {
+        "type": "object",
+        "required": ["name", "slug", "type", "project_id"],
+        "properties": {
+          "name": { "type": "string" },
+          "slug": { "type": "string" },
+          "description": { "type": "string" },
+          "type": { "type": "string", "enum": ["requirement", "design", "task", "code", "test", "pipeline"] },
+          "project_id": { "type": "string" },
+          "team_id": { "type": "string" },
+          "owners": { "type": "array", "items": { "type": "string" } },
+          "tags": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "UpdateAssetInput": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string" },
+          "description": { "type": "string" },
+          "tags": { "type": "array", "items": { "type": "string" } },
+          "owners": { "type": "array", "items": { "type": "string" } }
+        }
+      },
+      "AssetVersion": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "asset_id": { "type": "string" },
+          "version": { "type": "string" },
+          "content_ref": { "type": "string" },
+          "state": { "type": "string", "enum": ["draft", "published"] },
+          "published_at": { "type": "string", "format": "date-time" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateVersionInput": {
+        "type": "object",
+        "required": ["asset_id", "version"],
+        "properties": {
+          "asset_id": { "type": "string" },
+          "version": { "type": "string" },
+          "content_ref": { "type": "string" },
+          "changelog": { "type": "string" }
+        }
+      },
+      "DependencyGraph": {
+        "type": "object",
+        "properties": {
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "label": { "type": "string" },
+                "type": { "type": "string" },
+                "state": { "type": "string" }
+              }
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": { "type": "string" },
+                "source": { "type": "string" },
+                "target": { "type": "string" }
+              }
+            }
+          }
+        }
+      },
+      "Memory": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "projectId": { "type": "string" },
+          "type": { "type": "string" },
+          "content": { "type": "string" },
+          "metadata": { "type": "object" },
+          "status": { "type": "string", "enum": ["active", "archived"] },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateMemoryInput": {
+        "type": "object",
+        "required": ["projectId", "type", "content"],
+        "properties": {
+          "projectId": { "type": "string" },
+          "type": { "type": "string" },
+          "content": { "type": "string" },
+          "metadata": { "type": "object" }
+        }
+      },
+      "SearchMemoryInput": {
+        "type": "object",
+        "required": ["projectId", "query"],
+        "properties": {
+          "projectId": { "type": "string" },
+          "query": { "type": "string" },
+          "type": { "type": "string" },
+          "limit": { "type": "integer", "default": 10 }
+        }
+      },
+      "MemorySearchResult": {
+        "type": "object",
+        "properties": {
+          "memory": { "$ref": "#/components/schemas/Memory" },
+          "similarity": { "type": "number" },
+          "relevance": { "type": "number" }
+        }
+      },
+      "MemoryCandidate": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "projectId": { "type": "string" },
+          "sessionId": { "type": "string" },
+          "content": { "type": "string" },
+          "type": { "type": "string" },
+          "confidence": { "type": "number" },
+          "status": { "type": "string", "enum": ["pending", "approved", "rejected"] },
+          "extractedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "ReviewCandidateInput": {
+        "type": "object",
+        "required": ["candidateId", "action"],
+        "properties": {
+          "candidateId": { "type": "string" },
+          "action": { "type": "string", "enum": ["approve", "reject", "edit"] },
+          "editedContent": { "type": "string" },
+          "feedback": { "type": "string" }
+        }
+      },
+      "SessionMemory": {
+        "type": "object",
+        "properties": {
+          "sessionId": { "type": "string" },
+          "projectId": { "type": "string" },
+          "context": { "type": "string" },
+          "messages": { "type": "array" },
+          "tokenCount": { "type": "integer" },
+          "maxTokens": { "type": "integer" },
+          "createdAt": { "type": "string", "format": "date-time" },
+          "updatedAt": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateSessionInput": {
+        "type": "object",
+        "required": ["projectId"],
+        "properties": {
+          "projectId": { "type": "string" },
+          "assetId": { "type": "string" },
+          "context": { "type": "string" }
+        }
+      },
+      "MCPRequest": {
+        "type": "object",
+        "properties": {
+          "jsonrpc": { "type": "string", "enum": ["2.0"] },
+          "id": { "type": "string" },
+          "method": { "type": "string" },
+          "params": { "type": "object" }
+        }
+      },
+      "WebhookSubscription": {
+        "type": "object",
+        "properties": {
+          "id": { "type": "string" },
+          "url": { "type": "string" },
+          "events": { "type": "array", "items": { "type": "string" } },
+          "active": { "type": "boolean" },
+          "created_at": { "type": "string", "format": "date-time" }
+        }
+      },
+      "CreateWebhookInput": {
+        "type": "object",
+        "required": ["url", "events"],
+        "properties": {
+          "url": { "type": "string" },
+          "events": { "type": "array", "items": { "type": "string" } },
+          "project_id": { "type": "string" }
+        }
+      }
+    }
+  }
+}

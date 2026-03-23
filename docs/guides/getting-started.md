@@ -199,5 +199,6 @@ PORT=3001 npm run dev
 
 - 阅读 [平台架构设计](../architecture/platform-overview.md)
 - 了解 [Agent 系统](../architecture/agent-system.md)
-- 查看 [API 文档](../api/openapi.yaml)
+- 了解 [Memory System](./memory-system.md)
+- 查看 [API 文档](../api/openapi.json)
 - 了解 [部署指南](../operations/deployment.md)
