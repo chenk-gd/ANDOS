@@ -29,13 +29,13 @@ export type MemoryCandidateType = 'decision' | 'pattern' | 'error' | 'insight';
 export interface ToolCall {
   id: string;
   name: string;
-  arguments: Record<string, any>;
+  arguments: Record<string, unknown>;
 }
 
 /** Tool result information */
 export interface ToolResult {
   call_id: string;
-  output: any;
+  output: unknown;
   error?: string;
 }
 
@@ -79,7 +79,7 @@ export interface SessionCheckpoint {
   id: string;
   session_id: string;
   sequence: number;
-  state: Record<string, any>;
+  state: Record<string, unknown>;
   trigger: CheckpointTrigger;
   created_at: Date;
   expires_at?: Date;

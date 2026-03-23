@@ -5,7 +5,16 @@
 
 import { promises as fs } from 'fs';
 import * as path from 'path';
-import { ProjectMemory, SharedContext, LearnedPattern } from '../types/memory';
+import {
+  ProjectMemory,
+  SharedContext,
+  LearnedPattern,
+  CodeStylePreferences,
+  APIPattern,
+  CommonError,
+  TeamConvention,
+  ArchitectureDecision,
+} from '../types/memory';
 import { projectMemoryService } from './ProjectMemoryService';
 
 // Use posix paths for cross-platform consistency
@@ -457,7 +466,7 @@ export class FileTransparencyService {
   /**
    * Parse key-value list from markdown
    */
-  private parseKeyValueList(content: string): Record<string, any> {
+  private parseKeyValueList(content: string): Record<string, string | number | boolean> {
     const result: Record<string, any> = {};
     const lines = content.split('\n');
 
@@ -484,7 +493,7 @@ export class FileTransparencyService {
   /**
    * Parse code style preferences from markdown section
    */
-  private parseCodeStylePreferences(content: string): any {
+  private parseCodeStylePreferences(content: string): Partial<CodeStylePreferences> {
     const result = {
       naming_conventions: {},
       formatting_rules: {},
@@ -509,7 +518,7 @@ export class FileTransparencyService {
   /**
    * Parse language-specific settings
    */
-  private parseLanguageSpecific(content: string): Record<string, any> {
+  private parseLanguageSpecific(content: string): Record<string, Record<string, string | number | boolean>> {
     const result: Record<string, any> = {};
     const lines = content.split('\n');
     let currentLang: string | null = null;
@@ -542,7 +551,7 @@ export class FileTransparencyService {
   /**
    * Parse API patterns from markdown
    */
-  private parseAPIPatterns(content: string): any[] {
+  private parseAPIPatterns(content: string): APIPattern[] {
     const patterns: any[] = [];
     const sections = content.split(/### (.+)\n/).slice(1);
 
@@ -552,7 +561,7 @@ export class FileTransparencyService {
       const name = sections[i].trim();
       const body = sections[i + 1];
 
-      const pattern: any = { name, description: '', usage_examples: [] };
+      const pattern: APIPattern = { name, description: '', usage_examples: [] };
 
       const lines = body.split('\n').filter(l => l.trim());
       if (lines.length > 0) {
@@ -583,7 +592,7 @@ export class FileTransparencyService {
   /**
    * Parse common errors from markdown
    */
-  private parseCommonErrors(content: string): any[] {
+  private parseCommonErrors(content: string): CommonError[] {
     const errors: any[] = [];
     const sections = content.split(/### (.+)\n/).slice(1);
 
@@ -593,7 +602,7 @@ export class FileTransparencyService {
       const pattern = sections[i].trim();
       const body = sections[i + 1];
 
-      const error: any = { pattern, solution: '', prevention: '', examples: [] };
+      const error: CommonError = { pattern, solution: '', prevention: '', examples: [] };
 
       const solutionMatch = body.match(/\*\*Solution:\*\* (.+)/);
       if (solutionMatch) {
@@ -622,7 +631,7 @@ export class FileTransparencyService {
   /**
    * Parse team conventions from markdown
    */
-  private parseTeamConventions(content: string): any[] {
+  private parseTeamConventions(content: string): TeamConvention[] {
     const conventions: any[] = [];
     const lines = content.split('\n');
 
@@ -630,7 +639,7 @@ export class FileTransparencyService {
       const line = lines[i];
       const match = line.match(/^- \*\*(.+?)\*\*:\s*(.+)$/);
       if (match) {
-        const convention: any = {
+        const convention: TeamConvention = {
           category: match[1],
           rule: match[2],
           rationale: '',
@@ -654,7 +663,7 @@ export class FileTransparencyService {
   /**
    * Parse architecture decisions from markdown
    */
-  private parseArchitectureDecisions(content: string): any[] {
+  private parseArchitectureDecisions(content: string): ArchitectureDecision[] {
     const decisions: any[] = [];
     const sections = content.split(/### (.+)\n/).slice(1);
 
@@ -664,7 +673,7 @@ export class FileTransparencyService {
       const decision = sections[i].trim();
       const body = sections[i + 1];
 
-      const decisionObj: any = {
+      const decisionObj: Partial<ArchitectureDecision> = {
         decision,
         context: '',
         consequences: [],
