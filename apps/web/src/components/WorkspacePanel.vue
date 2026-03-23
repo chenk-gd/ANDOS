@@ -10,6 +10,9 @@
         <div class="asset-meta">
           <el-tag :type="getStateType(currentAsset.state)">{{ currentAsset.state }}</el-tag>
           <span class="version">v{{ currentAsset.currentVersion }}</span>
+          <el-button type="warning" @click="showImpactAnalysis">
+            影响分析
+          </el-button>
           <el-button type="primary" @click="showPublishDialog = true">
             发布版本
           </el-button>
@@ -84,6 +87,61 @@
       :previous-content="previousContentForPublish"
       @publish="handlePublish"
     />
+
+    <!-- 影响分析对话框 -->
+    <el-dialog
+      v-model="showImpactDialog"
+      title="影响分析"
+      width="800px"
+      :close-on-click-modal="false"
+    >
+      <div v-if="impactLoading" class="impact-loading">
+        <el-loading text="分析中..." />
+      </div>
+      <div v-else-if="impactData" class="impact-content">
+        <div class="impact-summary">
+          <el-alert
+            :title="`发布此版本将影响 ${impactData.affectedCount} 个下游资产`"
+            type="warning"
+            :closable="false"
+            show-icon
+          />
+        </div>
+        <div class="impact-graph">
+          <h4>下游依赖图谱</h4>
+          <DagCanvas
+            :graph="impactData.graph"
+            :selected-node-id="currentAsset?.id"
+            @select="handleImpactNodeSelect"
+          />
+        </div>
+        <div class="impact-list">
+          <h4>受影响的资产</h4>
+          <el-table :data="impactData.affectedAssets" size="small">
+            <el-table-column prop="name" label="资产名称" />
+            <el-table-column prop="type" label="类型" width="100" />
+            <el-table-column prop="state" label="状态" width="100">
+              <template #default="{ row }">
+                <el-tag :type="getStateType(row.state)">{{ row.state }}</el-tag>
+              </template>
+            </el-table-column>
+            <el-table-column prop="impactLevel" label="影响级别" width="120">
+              <template #default="{ row }">
+                <el-tag :type="getImpactLevelType(row.impactLevel)">
+                  {{ row.impactLevel || 'medium' }}
+                </el-tag>
+              </template>
+            </el-table-column>
+          </el-table>
+        </div>
+      </div>
+      <template #footer>
+        <el-button @click="showImpactDialog = false">关闭</el-button>
+        <el-button type="primary" @click="handlePublishAfterAnalysis">
+          确认并发布
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -100,7 +158,7 @@ import PublishVersionDialog from './PublishVersionDialog.vue'
 import MemoryManager from './MemoryManager.vue'
 import { getAssetSchema, getDefaultContent } from '@/schemas/assetSchemas'
 import { assetsApi } from '@/services/api'
-import { graphApi, type DependencyGraph } from '@/services/graph'
+import { graphApi, type DependencyGraph, type GraphEdge } from '@/services/graph'
 import type { Asset, AssetState, AssetVersion } from '@/types/asset'
 import { ElMessageBox, ElMessage } from 'element-plus'
 
@@ -137,6 +195,19 @@ const originalStructuredContent = ref('')
 const assetContent = ref('')
 const dependencyGraph = ref<DependencyGraph | null>(null)
 const showPublishDialog = ref(false)
+const showImpactDialog = ref(false)
+const impactLoading = ref(false)
+const impactData = ref<{
+  affectedCount: number
+  graph: DependencyGraph
+  affectedAssets: Array<{
+    id: string
+    name: string
+    type: string
+    state: AssetState
+    impactLevel?: 'high' | 'medium' | 'low'
+  }>
+} | null>(null)
 
 // 发布对话框内容对比
 const currentContentForPublish = computed(() => {
@@ -157,6 +228,89 @@ function getStateType(state: AssetState): '' | 'success' | 'warning' | 'info' | 
     archived: 'danger',
   }
   return map[state]
+}
+
+function getImpactLevelType(level?: string): 'danger' | 'warning' | 'info' {
+  const map: Record<string, 'danger' | 'warning' | 'info'> = {
+    high: 'danger',
+    medium: 'warning',
+    low: 'info',
+  }
+  return map[level || 'medium'] || 'warning'
+}
+
+// 影响分析
+async function showImpactAnalysis() {
+  if (!currentAsset.value) return
+
+  showImpactDialog.value = true
+  impactLoading.value = true
+
+  try {
+    // 获取下游依赖数据
+    const downstream = await graphApi.getDownstream(currentAsset.value.id, 3)
+
+    // 计算受影响的资产
+    const affectedAssets = downstream.data.nodes
+      .filter(node => node.id !== currentAsset.value?.id)
+      .map(node => ({
+        id: node.id,
+        name: node.label,
+        type: node.type,
+        state: node.state as AssetState,
+        // 根据深度计算影响级别
+        impactLevel: calculateImpactLevel(node.id, downstream.data.edges, currentAsset.value!.id) as 'high' | 'medium' | 'low',
+      }))
+
+    impactData.value = {
+      affectedCount: affectedAssets.length,
+      graph: downstream.data,
+      affectedAssets,
+    }
+  } catch (error) {
+    console.error('Failed to load impact analysis:', error)
+    ElMessage.error('影响分析加载失败')
+  } finally {
+    impactLoading.value = false
+  }
+}
+
+// 计算影响级别
+function calculateImpactLevel(nodeId: string, edges: GraphEdge[], sourceId: string): string {
+  // 构建节点到源节点的距离
+  const distances = new Map<string, number>()
+  distances.set(sourceId, 0)
+
+  // BFS计算距离
+  let changed = true
+  while (changed) {
+    changed = false
+    for (const edge of edges) {
+      const sourceDist = distances.get(edge.source)
+      if (sourceDist !== undefined) {
+        const targetDist = distances.get(edge.target)
+        if (targetDist === undefined || targetDist > sourceDist + 1) {
+          distances.set(edge.target, sourceDist + 1)
+          changed = true
+        }
+      }
+    }
+  }
+
+  const distance = distances.get(nodeId) || 999
+  if (distance <= 1) return 'high'
+  if (distance <= 2) return 'medium'
+  return 'low'
+}
+
+function handleImpactNodeSelect(nodeId: string) {
+  // 在影响分析中点击节点，可以高亮或显示详情
+  console.log('Selected impact node:', nodeId)
+}
+
+function handlePublishAfterAnalysis() {
+  showImpactDialog.value = false
+  showPublishDialog.value = true
 }
 
 function handleAutoSave(content: string) {
@@ -345,6 +499,39 @@ watch(() => currentAsset.value?.id, async (assetId) => {
 .tab-content {
   height: 100%;
   padding: 16px;
+}
+
+/* Impact Analysis Styles */
+.impact-loading {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+}
+
+.impact-content {
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.impact-summary {
+  margin-bottom: 20px;
+}
+
+.impact-graph {
+  margin-bottom: 20px;
+}
+
+.impact-graph h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.impact-list h4 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  color: var(--text-secondary);
 }
 
 .structured-form {

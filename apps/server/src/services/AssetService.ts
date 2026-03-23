@@ -6,6 +6,7 @@
  */
 
 import { db, withTransaction } from '../db/connection';
+import { webhookService } from './WebhookService';
 import {
   Asset,
   AssetState,
@@ -457,6 +458,8 @@ export class AssetService {
       return; // Skip if asset doesn't exist or is deleted
     }
 
+    const previousState = asset.state;
+
     await withTransaction(async (trx) => {
       // Add to dirty sources
       await trx('dirty_sources')
@@ -493,6 +496,26 @@ export class AssetService {
         );
       }
     });
+
+    // Trigger webhook after transaction (non-blocking)
+    try {
+      await webhookService.triggerEvent(
+        'asset.dirty',
+        {
+          asset_id: id,
+          project_id: asset.project_id,
+          upstream_asset_id: upstreamAssetId,
+          upstream_version: upstreamVersion,
+          impact_level: options?.impactLevel,
+          impact_analysis: options?.impactAnalysis,
+          previous_state: previousState,
+          timestamp: new Date().toISOString(),
+        },
+        { projectId: asset.project_id }
+      );
+    } catch (error) {
+      console.error('[AssetService] Failed to trigger dirty webhook:', error);
+    }
   }
 
   /**
@@ -591,6 +614,11 @@ export class AssetService {
     version: string,
     publishedBy?: string
   ): Promise<AssetVersion> {
+    const asset = await this.getById(assetId);
+    if (!asset) {
+      throw new AssetNotFoundError(assetId);
+    }
+
     const [updated] = await db('asset_versions')
       .where({ asset_id: assetId, version })
       .update({
@@ -606,6 +634,23 @@ export class AssetService {
 
     // Mark downstream assets as dirty
     await this.propagateDirtyStatus(assetId, version);
+
+    // Trigger webhook after publishing (non-blocking)
+    try {
+      await webhookService.triggerEvent(
+        'asset.published',
+        {
+          asset_id: assetId,
+          project_id: asset.project_id,
+          version: version,
+          published_by: publishedBy,
+          timestamp: new Date().toISOString(),
+        },
+        { projectId: asset.project_id }
+      );
+    } catch (error) {
+      console.error('[AssetService] Failed to trigger published webhook:', error);
+    }
 
     return updated;
   }
@@ -766,8 +811,32 @@ export class AssetService {
       .where({ target_asset_id: assetId, target_version: version })
       .select('source_asset_id');
 
+    const affectedAssetIds: string[] = [];
+
     for (const dep of downstream) {
       await this.markDirty(dep.source_asset_id, assetId, version);
+      affectedAssetIds.push(dep.source_asset_id);
+    }
+
+    // Trigger batch webhook if there are affected assets
+    if (affectedAssetIds.length > 0) {
+      try {
+        const upstreamAsset = await this.getById(assetId);
+        await webhookService.triggerEvent(
+          'asset.dirty_batch',
+          {
+            upstream_asset_id: assetId,
+            upstream_version: version,
+            affected_assets: affectedAssetIds,
+            affected_count: affectedAssetIds.length,
+            project_id: upstreamAsset?.project_id,
+            timestamp: new Date().toISOString(),
+          },
+          { projectId: upstreamAsset?.project_id }
+        );
+      } catch (error) {
+        console.error('[AssetService] Failed to trigger dirty_batch webhook:', error);
+      }
     }
   }
 

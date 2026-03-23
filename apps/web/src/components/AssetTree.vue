@@ -11,11 +11,17 @@
       <el-button :icon="Delete" circle size="small" @click="handleViewDeleted" />
     </div>
 
-    <el-tree
+    <div v-if="loading" class="loading-state">
+      <el-loading text="加载中..." />
+    </div>
+
+    <el-tree-v2
+      v-else
       :data="treeData"
       :props="{ children: 'children', label: 'name' }"
       :expand-on-click-node="false"
       :default-expanded-keys="expandedKeys"
+      :height="treeHeight"
       @node-click="handleNodeClick"
     >
       <template #default="{ node, data }">
@@ -28,12 +34,12 @@
           <span v-if="data.children" class="node-count">({{ data.children.length }})</span>
         </div>
       </template>
-    </el-tree>
+    </el-tree-v2>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Search, Plus, Delete } from '@element-plus/icons-vue'
 import { useAssetsStore } from '@/stores/assets'
 import { ASSET_TYPE_ICONS, ASSET_STATE_COLORS } from '@/types/asset'
@@ -47,9 +53,11 @@ const emit = defineEmits<{
 
 const store = useAssetsStore()
 const searchQuery = ref('')
+const treeHeight = ref(400)
 
 const selectedId = computed(() => store.selectedId)
 const expandedKeys = computed(() => store.assetTree.map(n => n.id))
+const loading = computed(() => store.loading)
 
 const treeData = computed(() => {
   if (!searchQuery.value) return store.assetTree
@@ -59,6 +67,25 @@ const treeData = computed(() => {
       child.name.toLowerCase().includes(searchQuery.value.toLowerCase())
     ),
   })).filter(g => g.children && g.children.length > 0)
+})
+
+// Calculate tree height based on container
+function updateTreeHeight() {
+  const container = document.querySelector('.asset-tree')
+  if (container) {
+    const header = container.querySelector('.tree-header')
+    const headerHeight = header?.clientHeight || 50
+    treeHeight.value = container.clientHeight - headerHeight
+  }
+}
+
+onMounted(() => {
+  updateTreeHeight()
+  window.addEventListener('resize', updateTreeHeight)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', updateTreeHeight)
 })
 
 function handleNodeClick(data: AssetNode) {
@@ -80,7 +107,8 @@ function handleViewDeleted() {
 <style scoped>
 .asset-tree {
   height: 100%;
-  overflow: auto;
+  display: flex;
+  flex-direction: column;
 }
 
 .tree-header {
@@ -89,6 +117,14 @@ function handleViewDeleted() {
   display: flex;
   gap: 8px;
   align-items: center;
+  flex-shrink: 0;
+}
+
+.loading-state {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tree-node {
