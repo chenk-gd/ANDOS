@@ -10,6 +10,8 @@
  */
 
 import * as cron from 'node-cron';
+import { kvMemoryService } from './KVMemoryService';
+import { sessionMemoryService } from './SessionMemoryService';
 
 // Type alias for node-cron ScheduledTask
 type CronTask = cron.ScheduledTask;
@@ -70,10 +72,11 @@ export class SchedulerService {
       schedule: '0 * * * *',
       handler: async () => {
         console.log('[Scheduler] Running TTL cleanup...');
-        // KVMemoryService and SessionMemoryService cleanup will be called here
-        // For now, this is a placeholder
+        const kvDeleted = await kvMemoryService.cleanupExpired();
+        const sessionDeleted = await sessionMemoryService.cleanupExpiredSessions();
+        console.log(`[Scheduler] TTL cleanup complete: ${kvDeleted} KV entries, ${sessionDeleted} session checkpoints deleted`);
       },
-      enabled: false, // Disabled by default until fully integrated
+      enabled: true, // Enabled by default
     });
 
     // Token usage stats - daily at midnight
