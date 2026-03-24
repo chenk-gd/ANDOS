@@ -3,8 +3,8 @@
  * Specialized agent for requirement analysis and generation
  */
 
-import { agentService, agentExecutionEngine } from '../AgentService';
-import { CreateAgentInput } from '../../types/agent';
+import { agentService, agentExecutionEngine } from '../services/AgentService';
+import { BaseAgent, AgentConfig, autoInitializeAgent } from './BaseAgent';
 
 // RequirementAgent system prompt
 const REQUIREMENT_AGENT_PROMPT = `You are RequirementAgent, an expert requirements analyst and specification writer.
@@ -50,7 +50,7 @@ requirement:
 `;
 
 // RequirementAgent configuration
-export const REQUIREMENT_AGENT_CONFIG: CreateAgentInput = {
+const REQUIREMENT_AGENT_CONFIG: AgentConfig = {
   slug: 'requirement-agent',
   name: 'RequirementAgent',
   description: 'Expert requirements analyst that converts user needs into detailed, actionable requirement specifications',
@@ -78,20 +78,143 @@ export const REQUIREMENT_AGENT_CONFIG: CreateAgentInput = {
 };
 
 /**
+ * RequirementAgent class
+ */
+export class RequirementAgent extends BaseAgent {
+  constructor() {
+    super(REQUIREMENT_AGENT_CONFIG);
+  }
+
+  /**
+   * Execute requirement analysis
+   */
+  async execute(input: unknown): Promise<unknown> {
+    const { userInput, contextAssets } = input as {
+      userInput: string;
+      contextAssets?: string[];
+    };
+    return await this.analyzeRequirements(userInput, contextAssets);
+  }
+
+  /**
+   * Analyze requirements from user input
+   */
+  async analyzeRequirements(
+    userInput: string,
+    contextAssets?: string[]
+  ): Promise<{
+    requirements: Array<{
+      id: string;
+      title: string;
+      description: string;
+      type: string;
+      priority: string;
+      acceptance_criteria: string[];
+      dependencies: string[];
+      estimated_effort: number;
+    }>;
+    analysis: string;
+  }> {
+    const session = await agentService.createSession({
+      agent_slug: this.config.slug,
+      context_assets: contextAssets || [],
+    });
+
+    const execution = await agentService.createExecution({
+      execution_id: `req-analysis-${Date.now()}`,
+      agent_slug: this.config.slug,
+      session_id: session.session_id,
+    });
+
+    const prompt = `Analyze the following user need and generate detailed requirements:
+
+User Input:
+${userInput}
+
+Please provide:
+1. A list of clear, actionable requirements
+2. Dependencies between requirements
+3. Effort estimates
+4. Acceptance criteria
+
+Output the requirements in the specified YAML format.`;
+
+    const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
+      maxTokens: 8192,
+      temperature: 0.3,
+    });
+
+    // Parse the YAML output (simplified - would need proper YAML parsing)
+    const requirements = parseRequirementsFromOutput(
+      (result.outputs?.fetch_asset as string) || result.reasoning || ''
+    );
+
+    return {
+      requirements,
+      analysis: result.reasoning || '',
+    };
+  }
+
+  /**
+   * Generate requirement specification document
+   */
+  async generateRequirementSpec(
+    requirementId: string
+  ): Promise<{
+    spec: string;
+    diagrams?: string[];
+  }> {
+    const session = await agentService.createSession({
+      agent_slug: this.config.slug,
+      context_assets: [requirementId],
+    });
+
+    const execution = await agentService.createExecution({
+      execution_id: `req-spec-${Date.now()}`,
+      agent_slug: this.config.slug,
+      session_id: session.session_id,
+      source_asset_id: requirementId,
+    });
+
+    const prompt = `Generate a comprehensive requirement specification document for requirement ${requirementId}.
+
+Include:
+1. Executive Summary
+2. Detailed Description
+3. Functional Requirements
+4. Non-Functional Requirements
+5. User Stories
+6. Acceptance Criteria
+7. Dependencies and Constraints
+8. Risk Analysis
+
+Format as a professional specification document.`;
+
+    const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
+      maxTokens: 8192,
+      temperature: 0.3,
+    });
+
+    return {
+      spec: result.reasoning || '',
+    };
+  }
+}
+
+// Export singleton instance
+export const requirementAgent = new RequirementAgent();
+
+/**
  * Initialize RequirementAgent
  * Creates the agent definition if it doesn't exist
  */
 export async function initializeRequirementAgent(): Promise<void> {
-  const existing = await agentService.getAgentBySlug(REQUIREMENT_AGENT_CONFIG.slug);
-
-  if (!existing) {
-    await agentService.createAgent(REQUIREMENT_AGENT_CONFIG);
-    console.log('RequirementAgent initialized');
-  }
+  await requirementAgent.initialize();
 }
 
 /**
  * Analyze requirements from user input
+ * @deprecated Use requirementAgent.analyzeRequirements() instead
  */
 export async function analyzeRequirements(
   userInput: string,
@@ -109,46 +232,12 @@ export async function analyzeRequirements(
   }>;
   analysis: string;
 }> {
-  const session = await agentService.createSession({
-    agent_slug: REQUIREMENT_AGENT_CONFIG.slug,
-    context_assets: contextAssets || [],
-  });
-
-  const execution = await agentService.createExecution({
-    execution_id: `req-analysis-${Date.now()}`,
-    agent_slug: REQUIREMENT_AGENT_CONFIG.slug,
-    session_id: session.session_id,
-  });
-
-  const prompt = `Analyze the following user need and generate detailed requirements:
-
-User Input:
-${userInput}
-
-Please provide:
-1. A list of clear, actionable requirements
-2. Dependencies between requirements
-3. Effort estimates
-4. Acceptance criteria
-
-Output the requirements in the specified YAML format.`;
-
-  const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
-    maxTokens: 8192,
-    temperature: 0.3,
-  });
-
-  // Parse the YAML output (simplified - would need proper YAML parsing)
-  const requirements = parseRequirementsFromOutput(result.outputs?.fetch_asset || result.reasoning || '');
-
-  return {
-    requirements,
-    analysis: result.reasoning || '',
-  };
+  return await requirementAgent.analyzeRequirements(userInput, contextAssets);
 }
 
 /**
  * Generate requirement specification document
+ * @deprecated Use requirementAgent.generateRequirementSpec() instead
  */
 export async function generateRequirementSpec(
   requirementId: string
@@ -156,52 +245,27 @@ export async function generateRequirementSpec(
   spec: string;
   diagrams?: string[];
 }> {
-  const session = await agentService.createSession({
-    agent_slug: REQUIREMENT_AGENT_CONFIG.slug,
-    context_assets: [requirementId],
-  });
-
-  const execution = await agentService.createExecution({
-    execution_id: `req-spec-${Date.now()}`,
-    agent_slug: REQUIREMENT_AGENT_CONFIG.slug,
-    session_id: session.session_id,
-    source_asset_id: requirementId,
-  });
-
-  const prompt = `Generate a comprehensive requirement specification document for requirement ${requirementId}.
-
-Include:
-1. Executive Summary
-2. Detailed Description
-3. Functional Requirements
-4. Non-Functional Requirements
-5. User Stories
-6. Acceptance Criteria
-7. Dependencies and Constraints
-8. Risk Analysis
-
-Format as a professional specification document.`;
-
-  const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
-    maxTokens: 8192,
-    temperature: 0.3,
-  });
-
-  return {
-    spec: result.reasoning || '',
-  };
+  return await requirementAgent.generateRequirementSpec(requirementId);
 }
 
 /**
  * Parse requirements from agent output
  * (Simplified implementation - would use proper YAML parser)
  */
-function parseRequirementsFromOutput(output: string): Array<any> {
+function parseRequirementsFromOutput(output: string): Array<{
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  priority: string;
+  acceptance_criteria: string[];
+  dependencies: string[];
+  estimated_effort: number;
+}> {
   // This is a placeholder - real implementation would parse YAML
   return [];
 }
 
 // Auto-initialize on module load if in production
-if (process.env.NODE_ENV === 'production') {
-  initializeRequirementAgent().catch(console.error);
-}
+autoInitializeAgent(requirementAgent);
+

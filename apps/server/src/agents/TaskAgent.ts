@@ -4,7 +4,7 @@
  */
 
 import { agentService, agentExecutionEngine } from '../services/AgentService';
-import { CreateAgentInput } from '../types/agent';
+import { BaseAgent, AgentConfig, autoInitializeAgent } from './BaseAgent';
 
 // TaskAgent system prompt
 const TASK_AGENT_PROMPT = `You are TaskAgent, an expert in task breakdown and project planning.
@@ -102,7 +102,7 @@ Hours (when known):
 `;
 
 // TaskAgent configuration
-export const TASK_AGENT_CONFIG: CreateAgentInput = {
+const TASK_AGENT_CONFIG: AgentConfig = {
   slug: 'task-agent',
   name: 'TaskAgent',
   description: 'Expert task planner that breaks down requirements and designs into actionable development tasks',
@@ -131,69 +131,80 @@ export const TASK_AGENT_CONFIG: CreateAgentInput = {
 };
 
 /**
- * Initialize TaskAgent
+ * TaskAgent class
  */
-export async function initializeTaskAgent(): Promise<void> {
-  const existing = await agentService.getAgentBySlug(TASK_AGENT_CONFIG.slug);
-
-  if (!existing) {
-    await agentService.createAgent(TASK_AGENT_CONFIG);
-    console.log('TaskAgent initialized');
+export class TaskAgent extends BaseAgent {
+  constructor() {
+    super(TASK_AGENT_CONFIG);
   }
-}
 
-/**
- * Break down requirement/design into tasks
- */
-export async function breakdownIntoTasks(
-  sourceAssetId: string,
-  options?: {
-    granularity?: 'epic' | 'story' | 'task';
-    maxStoryPoints?: number;
-    teamCapacity?: number;
-  }
-): Promise<{
-  tasks: Array<{
-    id: string;
-    title: string;
-    description: string;
-    type: string;
-    work_type: string[];
-    acceptance_criteria: string[];
-    dependencies: string[];
-    estimate: {
-      story_points: number;
-      hours: number;
+  /**
+   * Execute task breakdown
+   */
+  async execute(input: unknown): Promise<unknown> {
+    const { sourceAssetId, options } = input as {
+      sourceAssetId: string;
+      options?: {
+        granularity?: 'epic' | 'story' | 'task';
+        maxStoryPoints?: number;
+        teamCapacity?: number;
+      };
     };
-    assignee_type: string;
-    priority: string;
-    subtasks?: any[];
-  }>;
-  summary: {
-    total_tasks: number;
-    total_story_points: number;
-    estimated_days: number;
-    work_type_breakdown: Record<string, number>;
-  };
-}> {
-  const session = await agentService.createSession({
-    agent_slug: TASK_AGENT_CONFIG.slug,
-    context_assets: [sourceAssetId],
-  });
+    return await this.breakdownIntoTasks(sourceAssetId, options);
+  }
 
-  const execution = await agentService.createExecution({
-    execution_id: `task-breakdown-${Date.now()}`,
-    agent_slug: TASK_AGENT_CONFIG.slug,
-    session_id: session.session_id,
-    source_asset_id: sourceAssetId,
-    trigger_event_type: 'task.breakdown.requested',
-  });
+  /**
+   * Break down requirement/design into tasks
+   */
+  async breakdownIntoTasks(
+    sourceAssetId: string,
+    options?: {
+      granularity?: 'epic' | 'story' | 'task';
+      maxStoryPoints?: number;
+      teamCapacity?: number;
+    }
+  ): Promise<{
+    tasks: Array<{
+      id: string;
+      title: string;
+      description: string;
+      type: string;
+      work_type: string[];
+      acceptance_criteria: string[];
+      dependencies: string[];
+      estimate: {
+        story_points: number;
+        hours: number;
+      };
+      assignee_type: string;
+      priority: string;
+      subtasks?: unknown[];
+    }>;
+    summary: {
+      total_tasks: number;
+      total_story_points: number;
+      estimated_days: number;
+      work_type_breakdown: Record<string, number>;
+    };
+  }> {
+    const session = await agentService.createSession({
+      agent_slug: this.config.slug,
+      context_assets: [sourceAssetId],
+    });
 
-  const granularity = options?.granularity || 'task';
-  const maxPoints = options?.maxStoryPoints || 13;
-  const capacity = options?.teamCapacity || 5;
+    const execution = await agentService.createExecution({
+      execution_id: `task-breakdown-${Date.now()}`,
+      agent_slug: this.config.slug,
+      session_id: session.session_id,
+      source_asset_id: sourceAssetId,
+      trigger_event_type: 'task.breakdown.requested',
+    });
 
-  const prompt = `Break down the requirement/design ${sourceAssetId} into ${granularity}-level tasks.
+    const granularity = options?.granularity || 'task';
+    const maxPoints = options?.maxStoryPoints || 13;
+    const capacity = options?.teamCapacity || 5;
+
+    const prompt = `Break down the requirement/design ${sourceAssetId} into ${granularity}-level tasks.
 
 Constraints:
 - Maximum story points per task: ${maxPoints}
@@ -217,68 +228,68 @@ For each task provide:
 
 Output in the specified YAML format.`;
 
-  const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
-    maxTokens: 8192,
-    temperature: 0.2,
-  });
+    const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
+      maxTokens: 8192,
+      temperature: 0.2,
+    });
 
-  // Parse tasks from output
-  const tasks = parseTasksFromOutput(result.reasoning || '');
+    // Parse tasks from output
+    const tasks = parseTasksFromOutput(result.reasoning || '');
 
-  // Calculate summary
-  const summary = {
-    total_tasks: tasks.length,
-    total_story_points: tasks.reduce((sum, t) => sum + t.estimate.story_points, 0),
-    estimated_days: Math.ceil(tasks.reduce((sum, t) => sum + t.estimate.hours, 0) / 8 / capacity),
-    work_type_breakdown: tasks.reduce((acc, t) => {
-      t.work_type.forEach((wt: string) => {
-        acc[wt] = (acc[wt] || 0) + 1;
-      });
-      return acc;
-    }, {} as Record<string, number>),
-  };
+    // Calculate summary
+    const summary = {
+      total_tasks: tasks.length,
+      total_story_points: tasks.reduce((sum, t) => sum + t.estimate.story_points, 0),
+      estimated_days: Math.ceil(tasks.reduce((sum, t) => sum + t.estimate.hours, 0) / 8 / capacity),
+      work_type_breakdown: tasks.reduce((acc, t) => {
+        t.work_type.forEach((wt: string) => {
+          acc[wt] = (acc[wt] || 0) + 1;
+        });
+        return acc;
+      }, {} as Record<string, number>),
+    };
 
-  return {
-    tasks,
-    summary,
-  };
-}
-
-/**
- * Generate sprint plan from tasks
- */
-export async function generateSprintPlan(
-  taskIds: string[],
-  options: {
-    sprintDuration: number; // weeks
-    teamSize: number;
-    velocity: number; // story points per sprint
+    return {
+      tasks,
+      summary,
+    };
   }
-): Promise<{
-  sprints: Array<{
-    sprint_number: number;
-    tasks: string[];
-    total_points: number;
-    start_date: string;
-    end_date: string;
-  }>;
-  unassigned: string[];
-  risks: string[];
-}> {
-  const session = await agentService.createSession({
-    agent_slug: TASK_AGENT_CONFIG.slug,
-    context_assets: taskIds,
-  });
 
-  const execution = await agentService.createExecution({
-    execution_id: `sprint-plan-${Date.now()}`,
-    agent_slug: TASK_AGENT_CONFIG.slug,
-    session_id: session.session_id,
-  });
+  /**
+   * Generate sprint plan from tasks
+   */
+  async generateSprintPlan(
+    taskIds: string[],
+    options: {
+      sprintDuration: number;
+      teamSize: number;
+      velocity: number;
+    }
+  ): Promise<{
+    sprints: Array<{
+      sprint_number: number;
+      tasks: string[];
+      total_points: number;
+      start_date: string;
+      end_date: string;
+    }>;
+    unassigned: string[];
+    risks: string[];
+  }> {
+    const session = await agentService.createSession({
+      agent_slug: this.config.slug,
+      context_assets: taskIds,
+    });
 
-  const { sprintDuration, teamSize, velocity } = options;
+    const execution = await agentService.createExecution({
+      execution_id: `sprint-plan-${Date.now()}`,
+      agent_slug: this.config.slug,
+      session_id: session.session_id,
+    });
 
-  const prompt = `Create a sprint plan for ${taskIds.length} tasks.
+    const { sprintDuration, teamSize, velocity } = options;
+
+    const prompt = `Create a sprint plan for ${taskIds.length} tasks.
 
 Constraints:
 - Sprint duration: ${sprintDuration} weeks
@@ -302,45 +313,45 @@ Output sprint assignments with:
 - Risks identified
 - Tasks that don't fit (if any)`;
 
-  const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
-    maxTokens: 8192,
-    temperature: 0.2,
-  });
+    const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
+      maxTokens: 8192,
+      temperature: 0.2,
+    });
 
-  // Parse sprint plan
-  return {
-    sprints: [],
-    unassigned: [],
-    risks: [],
-  };
-}
+    // Parse sprint plan
+    return {
+      sprints: [],
+      unassigned: [],
+      risks: [],
+    };
+  }
 
-/**
- * Analyze task dependencies
- */
-export async function analyzeTaskDependencies(
-  taskIds: string[]
-): Promise<{
-  dependency_graph: {
-    nodes: Array<{ id: string; title: string }>;
-    edges: Array<{ from: string; to: string; type: string }>;
-  };
-  critical_path: string[];
-  blockers: string[];
-  parallel_groups: string[][];
-}> {
-  const session = await agentService.createSession({
-    agent_slug: TASK_AGENT_CONFIG.slug,
-    context_assets: taskIds,
-  });
+  /**
+   * Analyze task dependencies
+   */
+  async analyzeTaskDependencies(
+    taskIds: string[]
+  ): Promise<{
+    dependency_graph: {
+      nodes: Array<{ id: string; title: string }>;
+      edges: Array<{ from: string; to: string; type: string }>;
+    };
+    critical_path: string[];
+    blockers: string[];
+    parallel_groups: string[][];
+  }> {
+    const session = await agentService.createSession({
+      agent_slug: this.config.slug,
+      context_assets: taskIds,
+    });
 
-  const execution = await agentService.createExecution({
-    execution_id: `dep-analysis-${Date.now()}`,
-    agent_slug: TASK_AGENT_CONFIG.slug,
-    session_id: session.session_id,
-  });
+    const execution = await agentService.createExecution({
+      execution_id: `dep-analysis-${Date.now()}`,
+      agent_slug: this.config.slug,
+      session_id: session.session_id,
+    });
 
-  const prompt = `Analyze dependencies between these tasks:
+    const prompt = `Analyze dependencies between these tasks:
 
 ${taskIds.join('\n')}
 
@@ -353,28 +364,135 @@ Identify:
 
 Output dependency graph and analysis.`;
 
-  const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
-    maxTokens: 4096,
-    temperature: 0.2,
-  });
+    const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
+      maxTokens: 4096,
+      temperature: 0.2,
+    });
 
-  return {
-    dependency_graph: { nodes: [], edges: [] },
-    critical_path: [],
-    blockers: [],
-    parallel_groups: [],
+    return {
+      dependency_graph: { nodes: [], edges: [] },
+      critical_path: [],
+      blockers: [],
+      parallel_groups: [],
+    };
+  }
+}
+
+// Export singleton instance
+export const taskAgent = new TaskAgent();
+
+/**
+ * Initialize TaskAgent
+ * Creates the agent definition if it doesn't exist
+ */
+export async function initializeTaskAgent(): Promise<void> {
+  await taskAgent.initialize();
+}
+
+/**
+ * Break down requirement/design into tasks
+ * @deprecated Use taskAgent.breakdownIntoTasks() instead
+ */
+export async function breakdownIntoTasks(
+  sourceAssetId: string,
+  options?: {
+    granularity?: 'epic' | 'story' | 'task';
+    maxStoryPoints?: number;
+    teamCapacity?: number;
+  }
+): Promise<{
+  tasks: Array<{
+    id: string;
+    title: string;
+    description: string;
+    type: string;
+    work_type: string[];
+    acceptance_criteria: string[];
+    dependencies: string[];
+    estimate: {
+      story_points: number;
+      hours: number;
+    };
+    assignee_type: string;
+    priority: string;
+    subtasks?: unknown[];
+  }>;
+  summary: {
+    total_tasks: number;
+    total_story_points: number;
+    estimated_days: number;
+    work_type_breakdown: Record<string, number>;
   };
+}> {
+  return await taskAgent.breakdownIntoTasks(sourceAssetId, options);
+}
+
+/**
+ * Generate sprint plan from tasks
+ * @deprecated Use taskAgent.generateSprintPlan() instead
+ */
+export async function generateSprintPlan(
+  taskIds: string[],
+  options: {
+    sprintDuration: number;
+    teamSize: number;
+    velocity: number;
+  }
+): Promise<{
+  sprints: Array<{
+    sprint_number: number;
+    tasks: string[];
+    total_points: number;
+    start_date: string;
+    end_date: string;
+  }>;
+  unassigned: string[];
+  risks: string[];
+}> {
+  return await taskAgent.generateSprintPlan(taskIds, options);
+}
+
+/**
+ * Analyze task dependencies
+ * @deprecated Use taskAgent.analyzeTaskDependencies() instead
+ */
+export async function analyzeTaskDependencies(
+  taskIds: string[]
+): Promise<{
+  dependency_graph: {
+    nodes: Array<{ id: string; title: string }>;
+    edges: Array<{ from: string; to: string; type: string }>;
+  };
+  critical_path: string[];
+  blockers: string[];
+  parallel_groups: string[][];
+}> {
+  return await taskAgent.analyzeTaskDependencies(taskIds);
 }
 
 /**
  * Parse tasks from agent output
  */
-function parseTasksFromOutput(output: string): any[] {
+function parseTasksFromOutput(output: string): Array<{
+  id: string;
+  title: string;
+  description: string;
+  type: string;
+  work_type: string[];
+  acceptance_criteria: string[];
+  dependencies: string[];
+  estimate: {
+    story_points: number;
+    hours: number;
+  };
+  assignee_type: string;
+  priority: string;
+  subtasks?: unknown[];
+}> {
   // Placeholder - would use proper YAML parsing
   return [];
 }
 
-// Auto-initialize
-if (process.env.NODE_ENV === 'production') {
-  initializeTaskAgent().catch(console.error);
-}
+// Auto-initialize on module load if in production
+autoInitializeAgent(taskAgent);
+

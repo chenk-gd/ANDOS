@@ -50,9 +50,6 @@ interface MCPMessage {
     text: string;
   };
 }
-  name: string;
-  arguments: Record<string, unknown>;
-}
 
 // ============================================================================
 // Validation Schemas

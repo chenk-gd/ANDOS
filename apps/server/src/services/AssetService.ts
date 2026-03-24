@@ -516,8 +516,8 @@ export class AssetService {
     } catch (error) {
       // TODO: Replace with proper logger when available
       // Silently fail - webhook errors should not affect asset operations
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      throw new Error(`Failed to trigger dirty webhook: ${errorMessage}`);
+      // eslint-disable-next-line no-console
+      console.error('[AssetService] Failed to trigger dirty webhook:', error);
     }
   }
 

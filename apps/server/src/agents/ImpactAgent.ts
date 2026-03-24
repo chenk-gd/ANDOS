@@ -7,7 +7,7 @@
 
 import { agentService, agentExecutionEngine } from '../services/AgentService';
 import { dependencyGraphService } from '../services/DependencyGraphService';
-import { CreateAgentInput } from '../types/agent';
+import { BaseAgent, AgentConfig, autoInitializeAgent } from './BaseAgent';
 
 // ImpactAgent system prompt
 const IMPACT_AGENT_PROMPT = `You are ImpactAgent, an expert in analyzing the downstream impact of asset changes after publication.
@@ -214,7 +214,9 @@ When auto_approval is enabled:
 - read: Read file contents
 - analyze_impact: Calculate impact metrics
 
+
 ## Best Practices
+
 
 - Always provide confidence scores with reasoning
 - Estimate effort for required actions
@@ -224,7 +226,7 @@ When auto_approval is enabled:
 `;
 
 // ImpactAgent configuration
-export const IMPACT_AGENT_CONFIG: CreateAgentInput = {
+const IMPACT_AGENT_CONFIG: AgentConfig = {
   slug: 'impact-agent',
   name: 'ImpactAgent',
   description: 'Post-publish impact analyzer that identifies affected downstream assets and recommends actions',
@@ -244,7 +246,7 @@ export const IMPACT_AGENT_CONFIG: CreateAgentInput = {
     },
     permissions: {
       read: 'allow',
-      write: 'allow', // Needed to mark assets dirty
+      write: 'allow',
       edit: 'allow',
       bash: { '*': 'deny' },
     },
@@ -253,19 +255,244 @@ export const IMPACT_AGENT_CONFIG: CreateAgentInput = {
 };
 
 /**
+ * ImpactAgent class
+ */
+export class ImpactAgent extends BaseAgent {
+  constructor() {
+    super(IMPACT_AGENT_CONFIG);
+  }
+
+  /**
+   * Execute impact analysis
+   */
+  async execute(input: unknown): Promise<unknown> {
+    const { assetId, version, options } = input as {
+      assetId: string;
+      version: string;
+      options?: {
+        maxDepth?: number;
+        threshold?: 'high' | 'medium' | 'low';
+        autoApproval?: boolean;
+      };
+    };
+    return await this.analyzeImpact(assetId, version, options);
+  }
+
+  /**
+   * Analyze impact after publishing
+   */
+  async analyzeImpact(
+    assetId: string,
+    version: string,
+    options?: {
+      maxDepth?: number;
+      threshold?: 'high' | 'medium' | 'low';
+      autoApproval?: boolean;
+    }
+  ): Promise<{
+    totalAffected: number;
+    bySeverity: { high: number; medium: number; low: number };
+    byConfidence: { high: number; medium: number; low: number };
+    affectedAssets: Array<{
+      assetId: string;
+      name: string;
+      depth: number;
+      severity: 'high' | 'medium' | 'low';
+      confidence: number;
+      impactDescription: string;
+      requiredActions: string[];
+      estimatedEffort: string;
+      autoMarkDirty: boolean;
+    }>;
+    criticalPaths: string[][];
+    recommendations: {
+      immediate: string[];
+      scheduled: string[];
+    };
+    autoApproval: {
+      enabled: boolean;
+      markedDirty: number;
+      notificationsSent: number;
+    };
+  }> {
+    const session = await agentService.createSession({
+      agent_slug: this.config.slug,
+      context_assets: [assetId],
+    });
+
+    const execution = await agentService.createExecution({
+      execution_id: `impact-${Date.now()}`,
+      agent_slug: this.config.slug,
+      session_id: session.session_id,
+      source_asset_id: assetId,
+      trigger_event_type: 'asset.version.published',
+    });
+
+    const maxDepth = options?.maxDepth || 10;
+    const threshold = options?.threshold || 'medium';
+    const autoApproval = options?.autoApproval !== false;
+
+    // First, get the dependency graph
+    const graph = await dependencyGraphService.buildGraph(assetId, {
+      direction: 'downstream',
+      maxDepth,
+    });
+
+    const prompt = `Analyze impact of publishing asset ${assetId} version ${version}.
+
+Dependency Graph:
+- Total downstream nodes: ${graph.nodes.length}
+- Max depth: ${graph.maxDepth}
+- Cyclic: ${graph.cyclic}
+
+Analyze:
+1. Changes between versions
+2. Impact on each downstream asset
+3. Severity assessment
+4. Confidence scoring
+5. Required actions
+
+Auto-approval threshold: ${threshold}
+Max analysis depth: ${maxDepth}
+
+Provide structured impact report in the specified YAML format.`;
+
+    const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
+      maxTokens: 8192,
+      temperature: 0.2,
+    });
+
+    // Parse impact report
+    const report = parseImpactReport(result.reasoning || '');
+
+    // Apply auto-approval logic
+    let markedDirtyCount = 0;
+    let notificationsSent = 0;
+
+    if (autoApproval) {
+      for (const asset of report.affectedAssets) {
+        const shouldMarkDirty =
+          (threshold === 'high' && asset.severity === 'high') ||
+          (threshold === 'medium' && (asset.severity === 'high' || asset.severity === 'medium')) ||
+          (threshold === 'low');
+
+        if (shouldMarkDirty) {
+          asset.autoMarkDirty = true;
+          markedDirtyCount++;
+        }
+        notificationsSent++;
+      }
+    }
+
+    return {
+      totalAffected: report.totalAffected,
+      bySeverity: report.bySeverity,
+      byConfidence: report.byConfidence,
+      affectedAssets: report.affectedAssets,
+      criticalPaths: report.criticalPaths,
+      recommendations: report.recommendations,
+      autoApproval: {
+        enabled: autoApproval,
+        markedDirty: markedDirtyCount,
+        notificationsSent,
+      },
+    };
+  }
+
+  /**
+   * Calculate confidence score for impact
+   */
+  async calculateConfidence(
+    sourceAssetId: string,
+    targetAssetId: string,
+    changeType: 'breaking' | 'additive' | 'behavioral'
+  ): Promise<{
+    score: number;
+    reason: string;
+    factors: Array<{ factor: string; weight: number; contribution: number }>;
+  }> {
+    const session = await agentService.createSession({
+      agent_slug: this.config.slug,
+      context_assets: [sourceAssetId, targetAssetId],
+    });
+
+    const execution = await agentService.createExecution({
+      execution_id: `confidence-${Date.now()}`,
+      agent_slug: this.config.slug,
+      session_id: session.session_id,
+    });
+
+    const prompt = `Calculate confidence score for impact of changes in ${sourceAssetId} on ${targetAssetId}.
+
+Change type: ${changeType}
+
+Analyze:
+1. Dependency relationship (direct/indirect)
+2. Interface usage patterns
+3. Historical change impact data
+4. Code analysis
+
+Provide confidence score (0.0-1.0) with reasoning.`;
+
+    const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
+      maxTokens: 2048,
+      temperature: 0.2,
+    });
+
+    // Parse confidence score
+    return {
+      score: 0.75,
+      reason: 'Direct dependency with clear interface usage',
+      factors: [],
+    };
+  }
+
+
+  /**
+   * Identify critical paths that need immediate attention
+   */
+  async identifyCriticalPaths(
+    assetId: string,
+    options?: { maxPaths?: number }
+  ): Promise<Array<{ path: string[]; impact: string; reason: string }>> {
+    // Use the dependency graph service to find critical paths
+    const graph = await dependencyGraphService.buildGraph(assetId, {
+      direction: 'downstream',
+      maxDepth: 5,
+    });
+
+    const criticalPaths: Array<{ path: string[]; impact: string; reason: string }> = [];
+
+    // Find high-impact paths (depth 1 with dirty state or similar)
+    const immediateDependents = graph.nodes.filter((n) => n.depth === 1);
+    for (const dep of immediateDependents) {
+      if (dep.state === 'dirty' || dep.metadata?.hasDirtyUpstream) {
+        criticalPaths.push({
+          path: [assetId, dep.id],
+          impact: 'high',
+          reason: 'Immediate dependent with dirty status',
+        });
+      }
+    }
+
+    return criticalPaths.slice(0, options?.maxPaths || 5);
+  }
+}
+
+// Export singleton instance
+export const impactAgent = new ImpactAgent();
+
+/**
  * Initialize ImpactAgent
+ * Creates the agent definition if it doesn't exist
  */
 export async function initializeImpactAgent(): Promise<void> {
-  const existing = await agentService.getAgentBySlug(IMPACT_AGENT_CONFIG.slug);
-
-  if (!existing) {
-    await agentService.createAgent(IMPACT_AGENT_CONFIG);
-    console.log('ImpactAgent initialized');
-  }
+  await impactAgent.initialize();
 }
 
 /**
  * Analyze impact after publishing
+ * @deprecated Use impactAgent.analyzeImpact() instead
  */
 export async function analyzeImpact(
   assetId: string,
@@ -301,92 +528,12 @@ export async function analyzeImpact(
     notificationsSent: number;
   };
 }> {
-  const session = await agentService.createSession({
-    agent_slug: IMPACT_AGENT_CONFIG.slug,
-    context_assets: [assetId],
-  });
-
-  const execution = await agentService.createExecution({
-    execution_id: `impact-${Date.now()}`,
-    agent_slug: IMPACT_AGENT_CONFIG.slug,
-    session_id: session.session_id,
-    source_asset_id: assetId,
-    trigger_event_type: 'asset.version.published',
-  });
-
-  const maxDepth = options?.maxDepth || 10;
-  const threshold = options?.threshold || 'medium';
-  const autoApproval = options?.autoApproval !== false;
-
-  // First, get the dependency graph
-  const graph = await dependencyGraphService.buildGraph(assetId, {
-    direction: 'downstream',
-    maxDepth,
-  });
-
-  const prompt = `Analyze impact of publishing asset ${assetId} version ${version}.
-
-Dependency Graph:
-- Total downstream nodes: ${graph.nodes.length}
-- Max depth: ${graph.maxDepth}
-- Cyclic: ${graph.cyclic}
-
-Analyze:
-1. Changes between versions
-2. Impact on each downstream asset
-3. Severity assessment
-4. Confidence scoring
-5. Required actions
-
-Auto-approval threshold: ${threshold}
-Max analysis depth: ${maxDepth}
-
-Provide structured impact report in the specified YAML format.`;
-
-  const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
-    maxTokens: 8192,
-    temperature: 0.2,
-  });
-
-  // Parse impact report
-  const report = parseImpactReport(result.reasoning || '');
-
-  // Apply auto-approval logic
-  let markedDirtyCount = 0;
-  let notificationsSent = 0;
-
-  if (autoApproval) {
-    for (const asset of report.affectedAssets) {
-      const shouldMarkDirty =
-        (threshold === 'high' && asset.severity === 'high') ||
-        (threshold === 'medium' && (asset.severity === 'high' || asset.severity === 'medium')) ||
-        (threshold === 'low');
-
-      if (shouldMarkDirty) {
-        asset.autoMarkDirty = true;
-        markedDirtyCount++;
-      }
-      notificationsSent++;
-    }
-  }
-
-  return {
-    totalAffected: report.totalAffected,
-    bySeverity: report.bySeverity,
-    byConfidence: report.byConfidence,
-    affectedAssets: report.affectedAssets,
-    criticalPaths: report.criticalPaths,
-    recommendations: report.recommendations,
-    autoApproval: {
-      enabled: autoApproval,
-      markedDirty: markedDirtyCount,
-      notificationsSent,
-    },
-  };
+  return await impactAgent.analyzeImpact(assetId, version, options);
 }
 
 /**
  * Calculate confidence score for impact
+ * @deprecated Use impactAgent.calculateConfidence() instead
  */
 export async function calculateConfidence(
   sourceAssetId: string,
@@ -397,70 +544,18 @@ export async function calculateConfidence(
   reason: string;
   factors: Array<{ factor: string; weight: number; contribution: number }>;
 }> {
-  const session = await agentService.createSession({
-    agent_slug: IMPACT_AGENT_CONFIG.slug,
-    context_assets: [sourceAssetId, targetAssetId],
-  });
-
-  const execution = await agentService.createExecution({
-    execution_id: `confidence-${Date.now()}`,
-    agent_slug: IMPACT_AGENT_CONFIG.slug,
-    session_id: session.session_id,
-  });
-
-  const prompt = `Calculate confidence score for impact of changes in ${sourceAssetId} on ${targetAssetId}.
-
-Change type: ${changeType}
-
-Analyze:
-1. Dependency relationship (direct/indirect)
-2. Interface usage patterns
-3. Historical change impact data
-4. Code analysis
-
-Provide confidence score (0.0-1.0) with reasoning.`;
-
-  const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
-    maxTokens: 2048,
-    temperature: 0.2,
-  });
-
-  // Parse confidence score
-  return {
-    score: 0.75, // Placeholder
-    reason: 'Direct dependency with clear interface usage',
-    factors: [],
-  };
+  return await impactAgent.calculateConfidence(sourceAssetId, targetAssetId, changeType);
 }
 
 /**
  * Identify critical paths that need immediate attention
+ * @deprecated Use impactAgent.identifyCriticalPaths() instead
  */
 export async function identifyCriticalPaths(
   assetId: string,
   options?: { maxPaths?: number }
 ): Promise<Array<{ path: string[]; impact: string; reason: string }>> {
-  // Use the dependency graph service to find critical paths
-  const graph = await dependencyGraphService.buildGraph(assetId, {
-    direction: 'downstream',
-    maxDepth: 5,
-  });
-
-  const criticalPaths: Array<{ path: string[]; impact: string; reason: string }> = [];
-
-  // Find high-impact paths (depth 1 with dirty state or similar)
-  const immediateDependents = graph.nodes.filter((n) => n.depth === 1);
-  for (const dep of immediateDependents) {
-    if (dep.state === 'dirty' || dep.metadata?.hasDirtyUpstream) {
-      criticalPaths.push({
-        path: [assetId, dep.id],
-        impact: 'high',
-        reason: 'Immediate dependent with dirty status',
-      });
-    }
-  }
-
-  return criticalPaths.slice(0, options?.maxPaths || 5);
+  return await impactAgent.identifyCriticalPaths(assetId, options);
 }
 
 /**
@@ -495,7 +590,9 @@ function parseImpactReport(output: string): {
   };
 }
 
-// Auto-initialize
-if (process.env.NODE_ENV === 'production') {
-  initializeImpactAgent().catch(console.error);
-}
+// Auto-initialize on module load if in production
+autoInitializeAgent(impactAgent);
+
+// Re-export config for backward compatibility and tests
+export { IMPACT_AGENT_CONFIG };
+

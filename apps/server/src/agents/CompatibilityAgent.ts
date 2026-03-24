@@ -6,7 +6,7 @@
  */
 
 import { agentService, agentExecutionEngine } from '../services/AgentService';
-import { CreateAgentInput } from '../types/agent';
+import { BaseAgent, AgentConfig, autoInitializeAgent } from './BaseAgent';
 
 // CompatibilityAgent system prompt
 const COMPATIBILITY_AGENT_PROMPT = `You are CompatibilityAgent, an expert in detecting breaking changes and compatibility issues before asset publication.
@@ -165,7 +165,7 @@ compatibility_report:
 `;
 
 // CompatibilityAgent configuration
-export const COMPATIBILITY_AGENT_CONFIG: CreateAgentInput = {
+const COMPATIBILITY_AGENT_CONFIG: AgentConfig = {
   slug: 'compatibility-agent',
   name: 'CompatibilityAgent',
   description: 'Pre-publish compatibility checker that detects breaking changes and ensures safe asset publication',
@@ -194,19 +194,224 @@ export const COMPATIBILITY_AGENT_CONFIG: CreateAgentInput = {
 };
 
 /**
+ * CompatibilityAgent class
+ */
+export class CompatibilityAgent extends BaseAgent {
+  constructor() {
+    super(COMPATIBILITY_AGENT_CONFIG);
+  }
+
+  /**
+   * Execute compatibility check
+   */
+  async execute(input: unknown): Promise<unknown> {
+    const { assetId, version, options } = input as {
+      assetId: string;
+      version: string;
+      options?: {
+        checkInterfaces?: boolean;
+        checkSchema?: boolean;
+        checkApiContract?: boolean;
+        checkBehavior?: boolean;
+      };
+    };
+    return await this.checkCompatibility(assetId, version, options);
+  }
+
+  /**
+   * Check compatibility before publishing
+   */
+  async checkCompatibility(
+    assetId: string,
+    version: string,
+    options?: {
+      checkInterfaces?: boolean;
+      checkSchema?: boolean;
+      checkApiContract?: boolean;
+      checkBehavior?: boolean;
+    }
+  ): Promise<{
+    compatible: boolean;
+    status: 'compatible' | 'breaking' | 'partial';
+    recommendation: 'proceed' | 'review' | 'block';
+    checks: Array<{
+      category: 'interface' | 'schema' | 'api_contract' | 'behavior';
+      passed: boolean;
+      severity: 'breaking' | 'partial' | 'warning' | 'info';
+      description: string;
+      details?: Record<string, unknown>;
+      remediation?: string;
+    }>;
+    breakingChanges: number;
+    warnings: number;
+    requiredActions: string[];
+    optionalActions: string[];
+  }> {
+    const session = await agentService.createSession({
+      agent_slug: this.config.slug,
+      context_assets: [assetId],
+    });
+
+    const execution = await agentService.createExecution({
+      execution_id: `compat-check-${Date.now()}`,
+      agent_slug: this.config.slug,
+      session_id: session.session_id,
+      source_asset_id: assetId,
+      trigger_event_type: 'asset.version.pre_publish',
+    });
+
+    const checks = [];
+    if (options?.checkInterfaces !== false) checks.push('interface');
+    if (options?.checkSchema !== false) checks.push('schema');
+    if (options?.checkApiContract !== false) checks.push('api_contract');
+    if (options?.checkBehavior !== false) checks.push('behavior');
+
+    const prompt = `Perform compatibility check for asset ${assetId} version ${version}.
+
+Check categories: ${checks.join(', ')}
+
+Steps:
+1. Get the new version content
+2. Get the current published version for comparison
+3. Analyze changes in each category
+4. Identify breaking changes
+5. Generate structured compatibility report
+
+Provide the report in the specified YAML format.`;
+
+    const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
+      maxTokens: 8192,
+      temperature: 0.1,
+    });
+
+    // Parse compatibility report
+    const report = parseCompatibilityReport(result.reasoning || '');
+
+    return {
+      compatible: report.canPublish,
+      status: report.status,
+      recommendation: report.recommendation,
+      checks: report.checks,
+      breakingChanges: report.breakingChanges,
+      warnings: report.warnings,
+      requiredActions: report.requiredActions,
+      optionalActions: report.optionalActions,
+    };
+  }
+
+  /**
+   * Interface compatibility check
+   */
+  async checkInterfaceCompatibility(
+    oldAssetId: string,
+    newAssetId: string
+  ): Promise<{
+    compatible: boolean;
+    changes: Array<{
+      type: 'added' | 'removed' | 'modified';
+      element: string;
+      severity: 'breaking' | 'warning' | 'info';
+      description: string;
+    }>;
+  }> {
+    const session = await agentService.createSession({
+      agent_slug: this.config.slug,
+      context_assets: [oldAssetId, newAssetId],
+    });
+
+    const execution = await agentService.createExecution({
+      execution_id: `interface-check-${Date.now()}`,
+      agent_slug: this.config.slug,
+      session_id: session.session_id,
+    });
+
+    const prompt = `Compare interfaces between asset ${oldAssetId} (old) and ${newAssetId} (new).
+
+Analyze:
+1. Input parameter changes
+2. Output/return value changes
+3. Type changes
+4. Method signature changes
+
+Identify breaking changes and provide structured output.`;
+
+    const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
+      maxTokens: 4096,
+      temperature: 0.1,
+    });
+
+    // Parse interface changes
+    return {
+      compatible: true,
+      changes: [],
+    };
+  }
+
+  /**
+   * Schema compatibility check
+   */
+  async checkSchemaCompatibility(
+    assetId: string,
+    oldVersion: string,
+    newVersion: string
+  ): Promise<{
+    compatible: boolean;
+    changes: Array<{
+      table: string;
+      column?: string;
+      type: 'added' | 'removed' | 'modified';
+      severity: 'breaking' | 'warning' | 'info';
+      description: string;
+    }>;
+  }> {
+    const session = await agentService.createSession({
+      agent_slug: this.config.slug,
+      context_assets: [assetId],
+    });
+
+    const execution = await agentService.createExecution({
+      execution_id: `schema-check-${Date.now()}`,
+      agent_slug: this.config.slug,
+      session_id: session.session_id,
+    });
+
+    const prompt = `Compare database schema between version ${oldVersion} and ${newVersion} of asset ${assetId}.
+
+Analyze:
+1. Table additions/removals
+2. Column additions/removals
+3. Column type changes
+4. Constraint changes
+5. Index changes
+
+Identify breaking changes that affect downstream assets.`;
+
+    const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
+      maxTokens: 4096,
+      temperature: 0.1,
+    });
+
+    return {
+      compatible: true,
+      changes: [],
+    };
+  }
+}
+
+// Export singleton instance
+export const compatibilityAgent = new CompatibilityAgent();
+
+/**
  * Initialize CompatibilityAgent
+ * Creates the agent definition if it doesn't exist
  */
 export async function initializeCompatibilityAgent(): Promise<void> {
-  const existing = await agentService.getAgentBySlug(COMPATIBILITY_AGENT_CONFIG.slug);
-
-  if (!existing) {
-    await agentService.createAgent(COMPATIBILITY_AGENT_CONFIG);
-    console.log('CompatibilityAgent initialized');
-  }
+  await compatibilityAgent.initialize();
 }
 
 /**
  * Check compatibility before publishing
+ * @deprecated Use compatibilityAgent.checkCompatibility() instead
  */
 export async function checkCompatibility(
   assetId: string,
@@ -226,7 +431,7 @@ export async function checkCompatibility(
     passed: boolean;
     severity: 'breaking' | 'partial' | 'warning' | 'info';
     description: string;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
     remediation?: string;
   }>;
   breakingChanges: number;
@@ -234,60 +439,12 @@ export async function checkCompatibility(
   requiredActions: string[];
   optionalActions: string[];
 }> {
-  const session = await agentService.createSession({
-    agent_slug: COMPATIBILITY_AGENT_CONFIG.slug,
-    context_assets: [assetId],
-  });
-
-  const execution = await agentService.createExecution({
-    execution_id: `compat-check-${Date.now()}`,
-    agent_slug: COMPATIBILITY_AGENT_CONFIG.slug,
-    session_id: session.session_id,
-    source_asset_id: assetId,
-    trigger_event_type: 'asset.version.pre_publish',
-  });
-
-  const checks = [];
-  if (options?.checkInterfaces !== false) checks.push('interface');
-  if (options?.checkSchema !== false) checks.push('schema');
-  if (options?.checkApiContract !== false) checks.push('api_contract');
-  if (options?.checkBehavior !== false) checks.push('behavior');
-
-  const prompt = `Perform compatibility check for asset ${assetId} version ${version}.
-
-Check categories: ${checks.join(', ')}
-
-Steps:
-1. Get the new version content
-2. Get the current published version for comparison
-3. Analyze changes in each category
-4. Identify breaking changes
-5. Generate structured compatibility report
-
-Provide the report in the specified YAML format.`;
-
-  const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
-    maxTokens: 8192,
-    temperature: 0.1,
-  });
-
-  // Parse compatibility report
-  const report = parseCompatibilityReport(result.reasoning || '');
-
-  return {
-    compatible: report.canPublish,
-    status: report.status,
-    recommendation: report.recommendation,
-    checks: report.checks,
-    breakingChanges: report.breakingChanges,
-    warnings: report.warnings,
-    requiredActions: report.requiredActions,
-    optionalActions: report.optionalActions,
-  };
+  return await compatibilityAgent.checkCompatibility(assetId, version, options);
 }
 
 /**
  * Interface compatibility check
+ * @deprecated Use compatibilityAgent.checkInterfaceCompatibility() instead
  */
 export async function checkInterfaceCompatibility(
   oldAssetId: string,
@@ -301,41 +458,12 @@ export async function checkInterfaceCompatibility(
     description: string;
   }>;
 }> {
-  const session = await agentService.createSession({
-    agent_slug: COMPATIBILITY_AGENT_CONFIG.slug,
-    context_assets: [oldAssetId, newAssetId],
-  });
-
-  const execution = await agentService.createExecution({
-    execution_id: `interface-check-${Date.now()}`,
-    agent_slug: COMPATIBILITY_AGENT_CONFIG.slug,
-    session_id: session.session_id,
-  });
-
-  const prompt = `Compare interfaces between asset ${oldAssetId} (old) and ${newAssetId} (new).
-
-Analyze:
-1. Input parameter changes
-2. Output/return value changes
-3. Type changes
-4. Method signature changes
-
-Identify breaking changes and provide structured output.`;
-
-  const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
-    maxTokens: 4096,
-    temperature: 0.1,
-  });
-
-  // Parse interface changes
-  return {
-    compatible: true, // Placeholder
-    changes: [],
-  };
+  return await compatibilityAgent.checkInterfaceCompatibility(oldAssetId, newAssetId);
 }
 
 /**
  * Schema compatibility check
+ * @deprecated Use compatibilityAgent.checkSchemaCompatibility() instead
  */
 export async function checkSchemaCompatibility(
   assetId: string,
@@ -351,37 +479,7 @@ export async function checkSchemaCompatibility(
     description: string;
   }>;
 }> {
-  const session = await agentService.createSession({
-    agent_slug: COMPATIBILITY_AGENT_CONFIG.slug,
-    context_assets: [assetId],
-  });
-
-  const execution = await agentService.createExecution({
-    execution_id: `schema-check-${Date.now()}`,
-    agent_slug: COMPATIBILITY_AGENT_CONFIG.slug,
-    session_id: session.session_id,
-  });
-
-  const prompt = `Compare database schema between version ${oldVersion} and ${newVersion} of asset ${assetId}.
-
-Analyze:
-1. Table additions/removals
-2. Column additions/removals
-3. Column type changes
-4. Constraint changes
-5. Index changes
-
-Identify breaking changes that affect downstream assets.`;
-
-  const result = await agentExecutionEngine.execute(execution.execution_id, prompt, {
-    maxTokens: 4096,
-    temperature: 0.1,
-  });
-
-  return {
-    compatible: true,
-    changes: [],
-  };
+  return await compatibilityAgent.checkSchemaCompatibility(assetId, oldVersion, newVersion);
 }
 
 /**
@@ -391,7 +489,14 @@ function parseCompatibilityReport(output: string): {
   canPublish: boolean;
   status: 'compatible' | 'breaking' | 'partial';
   recommendation: 'proceed' | 'review' | 'block';
-  checks: any[];
+  checks: Array<{
+    category: 'interface' | 'schema' | 'api_contract' | 'behavior';
+    passed: boolean;
+    severity: 'breaking' | 'partial' | 'warning' | 'info';
+    description: string;
+    details?: Record<string, unknown>;
+    remediation?: string;
+  }>;
   breakingChanges: number;
   warnings: number;
   requiredActions: string[];
@@ -411,7 +516,9 @@ function parseCompatibilityReport(output: string): {
   };
 }
 
-// Auto-initialize
-if (process.env.NODE_ENV === 'production') {
-  initializeCompatibilityAgent().catch(console.error);
-}
+// Auto-initialize on module load if in production
+autoInitializeAgent(compatibilityAgent);
+
+// Re-export config for backward compatibility and tests
+export { COMPATIBILITY_AGENT_CONFIG };
+

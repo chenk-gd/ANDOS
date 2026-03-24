@@ -522,3 +522,21 @@ export class AgentService {
 
 // Export singleton instance
 export const agentService = new AgentService();
+
+/**
+ * Simple agent execution engine
+ * Placeholder implementation - would integrate with actual AI execution
+ */
+export const agentExecutionEngine = {
+  async execute(
+    executionId: string,
+    prompt: string,
+    options?: { maxTokens?: number; temperature?: number }
+  ): Promise<{ reasoning?: string; outputs?: Record<string, unknown> }> {
+    // Placeholder - would call actual AI service
+    return {
+      reasoning: 'Placeholder execution result',
+      outputs: {},
+    };
+  },
+};
