@@ -1,9 +1,8 @@
 /**
  * AgentExecutionEngine - AI-Native DevOps Platform
- * Executes agent tasks with Claude API integration
+ * Executes agent tasks with LLM integration
  */
 
-import Anthropic from '@anthropic-ai/sdk';
 import { db } from '../db/connection';
 import { agentService, AgentError } from './AgentService';
 import {
@@ -14,11 +13,8 @@ import {
   ToolPermissions,
   ExecutionStatus,
 } from '../types/agent';
-
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+import { LLMProviderFactory } from '../llm/LLMProviderFactory';
+import type { LLMRequest, LLMTool, LLMStreamEvent } from '../llm/types';
 
 // Tool registry
 interface ToolDefinition {
@@ -67,6 +63,7 @@ function checkPermission(
  */
 export class AgentExecutionEngine {
   private toolRegistry: Map<string, ToolDefinition> = new Map();
+  private llmProvider = LLMProviderFactory.getGlobalProvider();
 
   constructor() {
     this.registerBuiltInTools();
@@ -249,18 +246,21 @@ export class AgentExecutionEngine {
     const availableTools = this.getAvailableTools(agent.config?.permissions, options?.tools);
 
     try {
-      // Call Claude API
-      const response = await anthropic.messages.create({
+      // Build LLM request
+      const llmRequest: LLMRequest = {
         model: agent.config?.model || 'claude-3-5-sonnet-20241022',
-        max_tokens: options?.maxTokens || 4096,
+        messages: [{ role: 'user', content: prompt }],
+        maxTokens: options?.maxTokens || 4096,
         temperature: options?.temperature ?? agent.config?.temperature ?? 0.7,
         system: systemPrompt,
-        messages: [{ role: 'user', content: prompt }],
         tools: availableTools,
-      });
+      };
+
+      // Call LLM provider
+      const response = await this.llmProvider.generate(llmRequest);
 
       // Process response
-      const result = await this.processResponse(response, {
+      const result = await this.processLLMResponse(response, {
         executionId,
         sessionId: execution.session_id || '',
         agentSlug: agent.slug,
@@ -270,7 +270,7 @@ export class AgentExecutionEngine {
       if (execution.session_id) {
         await agentService.updateSessionActivity(
           execution.session_id,
-          response.usage.output_tokens
+          response.usage.outputTokens
         );
       }
 
@@ -278,7 +278,7 @@ export class AgentExecutionEngine {
         status: 'success',
         outputs: result.outputs,
         reasoning: result.reasoning,
-        tokenUsed: response.usage.output_tokens,
+        tokenUsed: response.usage.outputTokens,
       };
     } catch (error) {
       return {
@@ -324,8 +324,8 @@ export class AgentExecutionEngine {
   private getAvailableTools(
     permissions: ToolPermissions | undefined,
     toolFilter?: string[]
-  ): Anthropic.Tool[] {
-    const tools: Anthropic.Tool[] = [];
+  ): LLMTool[] {
+    const tools: LLMTool[] = [];
 
     for (const [name, tool] of this.toolRegistry) {
       // Check if tool is filtered
@@ -341,7 +341,7 @@ export class AgentExecutionEngine {
       tools.push({
         name: tool.name,
         description: tool.description,
-        input_schema: tool.parameters,
+        parameters: tool.parameters,
       });
     }
 
@@ -349,10 +349,35 @@ export class AgentExecutionEngine {
   }
 
   /**
-   * Process Claude API response
+   * Process LLM response
+   */
+  private async processLLMResponse(
+    response: import('../llm/types').LLMResponse,
+    context: ToolContext
+  ): Promise<{ outputs: Record<string, any>; reasoning?: string }> {
+    const outputs: Record<string, any> = {};
+    let reasoning = response.content || '';
+
+    // Process tool calls
+    if (response.toolCalls && response.toolCalls.length > 0) {
+      for (const toolCall of response.toolCalls) {
+        const tool = this.toolRegistry.get(toolCall.name);
+        if (tool) {
+          const result = await tool.handler(toolCall.arguments, context);
+          outputs[toolCall.name] = result;
+        }
+      }
+    }
+
+    return { outputs, reasoning };
+  }
+
+  /**
+   * Process Claude API response (legacy, for backward compatibility)
+   * @deprecated Use processLLMResponse instead
    */
   private async processResponse(
-    response: Anthropic.Message,
+    response: any,
     context: ToolContext
   ): Promise<{ outputs: Record<string, any>; reasoning?: string }> {
     const outputs: Record<string, any> = {};
@@ -407,28 +432,50 @@ export class AgentExecutionEngine {
     const systemPrompt = this.buildSystemPrompt(agent, []);
     const availableTools = this.getAvailableTools(agent.config?.permissions);
 
-    try {
-      const stream = await anthropic.messages.create({
-        model: agent.config?.model || 'claude-3-5-sonnet-20241022',
-        max_tokens: options?.maxTokens || 4096,
-        temperature: options?.temperature ?? agent.config?.temperature ?? 0.7,
-        system: systemPrompt,
-        messages: [{ role: 'user', content: prompt }],
-        tools: availableTools,
-        stream: true,
-      });
+    // Build LLM request
+    const llmRequest: LLMRequest = {
+      model: agent.config?.model || 'claude-3-5-sonnet-20241022',
+      messages: [{ role: 'user', content: prompt }],
+      maxTokens: options?.maxTokens || 4096,
+      temperature: options?.temperature ?? agent.config?.temperature ?? 0.7,
+      system: systemPrompt,
+      tools: availableTools,
+    };
 
-      for await (const event of stream) {
-        if (event.type === 'content_block_delta') {
-          if (event.delta.type === 'text_delta') {
-            yield { type: 'text', content: event.delta.text };
-          }
-        } else if (event.type === 'content_block_start') {
-          if (event.content_block.type === 'tool_use') {
+    try {
+      // Check if provider supports streaming
+      if (this.llmProvider.stream) {
+        const stream = this.llmProvider.stream(llmRequest);
+
+        for await (const event of stream) {
+          if (event.type === 'text') {
+            yield { type: 'text', content: event.content };
+          } else if (event.type === 'tool_call') {
             yield {
               type: 'tool_use',
-              toolName: event.content_block.name,
-              toolInput: event.content_block.input,
+              toolName: event.toolCall?.name,
+              toolInput: event.toolCall?.arguments,
+            };
+          } else if (event.type === 'error') {
+            yield { type: 'error', error: event.error };
+          }
+        }
+      } else {
+        // Fallback to non-streaming
+        const response = await this.llmProvider.generate(llmRequest);
+
+        // Yield text content
+        if (response.content) {
+          yield { type: 'text', content: response.content };
+        }
+
+        // Yield tool calls
+        if (response.toolCalls) {
+          for (const toolCall of response.toolCalls) {
+            yield {
+              type: 'tool_use',
+              toolName: toolCall.name,
+              toolInput: toolCall.arguments,
             };
           }
         }
