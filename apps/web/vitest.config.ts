@@ -8,6 +8,16 @@ export default defineConfig({
     name: '@andos/web',
     environment: 'jsdom',
     globals: true,
+    include: ['src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
+    exclude: [
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/e2e/**',
+      '**/*.e2e.spec.ts',
+      '**/cypress/**',
+      '**/.{idea,git,cache,output,temp}/**',
+      '**/playwright-tests/**',
+    ],
     deps: {
       inline: ['element-plus'],
     },
@@ -17,6 +27,7 @@ export default defineConfig({
       exclude: [
         'node_modules/',
         'e2e/',
+        'dist/',
         '**/*.d.ts',
         '**/*.config.ts',
         '**/mock.ts',
