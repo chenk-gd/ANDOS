@@ -194,13 +194,13 @@ export async function generateTestSuite(
   test_data: {
     fixtures: Array<{
       name: string;
-      data: any[];
+      data: unknown[];
     }>;
     mocks: Array<{
       module: string;
       methods: Array<{
         name: string;
-        returns: any;
+        returns: unknown;
       }>;
     }>;
   };
@@ -323,7 +323,7 @@ Provide actionable insights for improving test coverage.`;
  * Generate test data
  */
 export async function generateTestData(
-  schema: Record<string, any>,
+  schema: Record<string, unknown>,
   options?: {
     count?: number;
     locale?: string;
@@ -332,11 +332,11 @@ export async function generateTestData(
 ): Promise<{
   fixtures: Array<{
     name: string;
-    data: any[];
+    data: unknown[];
   }>;
   edge_cases: Array<{
     name: string;
-    data: any;
+    data: unknown;
     description: string;
   }>;
 }> {
@@ -438,10 +438,23 @@ Provide:
   };
 }
 
+interface ParsedTestSuite {
+  test_cases: unknown[];
+  test_data: {
+    fixtures: unknown[];
+    mocks: unknown[];
+  };
+  coverage_projection: {
+    lines: number;
+    functions: number;
+    branches: number;
+  };
+}
+
 /**
  * Parse test suite from output
  */
-function parseTestSuite(output: string): any {
+function parseTestSuite(output: string): ParsedTestSuite {
   // Placeholder - would use proper YAML parsing
   return {
     test_cases: [],
