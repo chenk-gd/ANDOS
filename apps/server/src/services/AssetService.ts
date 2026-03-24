@@ -226,7 +226,7 @@ export class AssetService {
       throw new AssetNotFoundError(id);
     }
 
-    const updateData: Record<string, any> = {
+    const updateData: Record<string, unknown> = {
       updated_at: new Date(),
     };
 

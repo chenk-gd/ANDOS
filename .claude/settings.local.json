@@ -18,7 +18,17 @@
       "Bash(npx vitest:*)",
       "Bash(npx tsc:*)",
       "Bash(ls:*)",
-      "Bash(npx playwright:*)"
+      "Bash(npx playwright:*)",
+      "Bash(git checkout:*)",
+      "Bash(grep -n \"^\\\\`\")",
+      "Bash(dos2unix apps/server/src/agents/TestAgent.ts)",
+      "Bash(grep:*)",
+      "Bash(find /c/workspace/TsProjects/ANDOS -name *.config.ts -o -name vitest.config.*)",
+      "Bash(cd:*)",
+      "Bash(npm test:*)",
+      "Bash(npm ls:*)",
+      "Bash(find . -path */llm/* -type f)",
+      "Bash(find tests:*)"
     ]
   }
 }
