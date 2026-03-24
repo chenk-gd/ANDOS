@@ -6,6 +6,7 @@
 
 import { db } from '../db/connection';
 import type { MemoryCandidate, MemoryCandidateType, CandidateStatus, Turn } from '../types/memory';
+import { logger } from '../utils/logger';
 
 export interface ExtractionPolicy {
   tokenThresholds: { first: number; subsequent: number };
@@ -42,7 +43,7 @@ export class AutoMemoryExtractionService {
       }
     } catch (error) {
       // Background extraction should not throw - log and continue
-      console.error('AutoMemoryExtractionService: Extraction failed:', error);
+      logger.error('AutoMemoryExtractionService: Extraction failed:', error);
     }
   }
 

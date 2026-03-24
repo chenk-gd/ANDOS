@@ -11,6 +11,7 @@
  */
 
 import { db } from '../db/connection';
+import { logger } from '../utils/logger';
 
 export interface TokenThresholds {
   /** Token threshold for first checkpoint */
@@ -302,7 +303,7 @@ export class TokenTrackingService {
           updated_at: new Date(),
         });
     } catch (error) {
-      console.error(`Failed to persist token stats for ${sessionId}:`, error);
+      logger.error(`Failed to persist token stats for ${sessionId}:`, error);
     }
   }
 
@@ -333,7 +334,7 @@ export class TokenTrackingService {
         this.sessionData.set(sessionId, data);
       }
     } catch (error) {
-      console.error(`Failed to load token stats for ${sessionId}:`, error);
+      logger.error(`Failed to load token stats for ${sessionId}:`, error);
     }
   }
 }

@@ -5,6 +5,7 @@
 
 import { agentService } from '../services/AgentService';
 import { CreateAgentInput } from '../types/agent';
+import { logger } from '../utils/logger';
 
 export interface AgentConfig {
   slug: string;
@@ -51,8 +52,7 @@ export abstract class BaseAgent {
       };
 
       await agentService.createAgent(agentInput);
-      // eslint-disable-next-line no-console
-      console.log(`${this.config.name} initialized`);
+      logger.info(`${this.config.name} initialized`);
     }
   }
 
@@ -77,8 +77,7 @@ export abstract class BaseAgent {
     // TODO: Replace with proper logger when available
     // For now, only log in development
     if (process.env.NODE_ENV === 'development') {
-      // eslint-disable-next-line no-console
-      console.log(`[${this.config.name}] ${message}`);
+      logger.debug(`[${this.config.name}] ${message}`);
     }
   }
 
@@ -98,8 +97,7 @@ export async function autoInitializeAgent(agent: BaseAgent): Promise<void> {
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       // TODO: Replace with proper logger
-      // eslint-disable-next-line no-console
-      console.error(`Failed to initialize ${agent.getSlug()}:`, errorMessage);
+      logger.error(`Failed to initialize ${agent.getSlug()}:`, errorMessage);
     }
   }
 }

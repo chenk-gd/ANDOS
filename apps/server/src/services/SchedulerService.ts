@@ -12,6 +12,7 @@
 import * as cron from 'node-cron';
 import { kvMemoryService } from './KVMemoryService';
 import { sessionMemoryService } from './SessionMemoryService';
+import { logger } from '../utils/logger';
 
 // Type alias for node-cron ScheduledTask
 type CronTask = cron.ScheduledTask;
@@ -59,7 +60,7 @@ export class SchedulerService {
       name: 'auto-memory-extraction',
       schedule: '*/5 * * * *',
       handler: async () => {
-        console.log('[Scheduler] Running auto memory extraction...');
+        logger.info('[Scheduler] Running auto memory extraction...');
         // AutoMemoryExtractionService will be injected here
         // For now, this is a placeholder
       },
@@ -71,10 +72,10 @@ export class SchedulerService {
       name: 'ttl-cleanup',
       schedule: '0 * * * *',
       handler: async () => {
-        console.log('[Scheduler] Running TTL cleanup...');
+        logger.info('[Scheduler] Running TTL cleanup...');
         const kvDeleted = await kvMemoryService.cleanupExpired();
         const sessionDeleted = await sessionMemoryService.cleanupExpiredSessions();
-        console.log(`[Scheduler] TTL cleanup complete: ${kvDeleted} KV entries, ${sessionDeleted} session checkpoints deleted`);
+        logger.info(`[Scheduler] TTL cleanup complete: ${kvDeleted} KV entries, ${sessionDeleted} session checkpoints deleted`);
       },
       enabled: true, // Enabled by default
     });
@@ -84,7 +85,7 @@ export class SchedulerService {
       name: 'token-usage-stats',
       schedule: '0 0 * * *',
       handler: async () => {
-        console.log('[Scheduler] Running token usage stats...');
+        logger.info('[Scheduler] Running token usage stats...');
         // TokenTrackingService stats aggregation will be called here
         // For now, this is a placeholder
       },
@@ -155,7 +156,7 @@ export class SchedulerService {
     }
 
     if (!record.task.enabled) {
-      console.warn(`Task ${name} is disabled and will not be started`);
+      logger.warn(`Task ${name} is disabled and will not be started`);
       return;
     }
 
@@ -165,14 +166,14 @@ export class SchedulerService {
         await record.task.handler();
         record.lastRun = new Date();
       } catch (error) {
-        console.error(`[Scheduler] Task ${name} failed:`, error);
+        logger.error(`[Scheduler] Task ${name} failed:`, error);
         // Continue running - don't stop the scheduler on error
       }
     }, {
       timezone: 'UTC',
     });
 
-    console.log(`[Scheduler] Started task: ${name} (${record.task.schedule})`);
+    logger.info(`[Scheduler] Started task: ${name} (${record.task.schedule})`);
   }
 
   /**
@@ -187,7 +188,7 @@ export class SchedulerService {
     if (record.cronTask) {
       record.cronTask.stop();
       record.cronTask = null;
-      console.log(`[Scheduler] Stopped task: ${name}`);
+      logger.info(`[Scheduler] Stopped task: ${name}`);
     }
   }
 
@@ -273,7 +274,7 @@ export class SchedulerService {
       await record.task.handler();
       record.lastRun = new Date();
     } catch (error) {
-      console.error(`[Scheduler] Task ${name} failed (manual run):`, error);
+      logger.error(`[Scheduler] Task ${name} failed (manual run):`, error);
       throw error;
     }
   }

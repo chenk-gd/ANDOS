@@ -24,6 +24,7 @@ import { projectRoutes } from './routes/projects';
 import { projectMemberRoutes } from './routes/projectMembers';
 import { authMiddleware } from './middleware/auth';
 import { fieldFilteringHook } from './utils/fieldFiltering';
+import { setGlobalLogger } from './utils/logger';
 
 dotenv.config();
 
@@ -40,6 +41,9 @@ const server = Fastify({
     } : undefined,
   },
 });
+
+// Set global logger for use in other modules
+setGlobalLogger(server.log);
 
 // Register plugins
 async function registerPlugins(): Promise<void> {

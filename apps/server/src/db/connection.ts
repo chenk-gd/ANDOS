@@ -5,6 +5,7 @@
 
 import knex, { Knex } from 'knex';
 import config from '../../knexfile';
+import { logger } from '../utils/logger';
 
 const env = process.env.NODE_ENV || 'development';
 const knexConfig = config[env];
@@ -22,7 +23,7 @@ export async function checkConnection(): Promise<boolean> {
     await db.raw('SELECT 1');
     return true;
   } catch (error) {
-    console.error('Database connection failed:', error);
+    logger.error('Database connection failed:', error);
     return false;
   }
 }

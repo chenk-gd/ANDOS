@@ -22,13 +22,14 @@ import { initializeCodeAgent } from './CodeAgent';
 import { initializeTestAgent } from './TestAgent';
 import { initializeCompatibilityAgent } from './CompatibilityAgent';
 import { initializeImpactAgent } from './ImpactAgent';
+import { logger } from '../utils/logger';
 
 /**
  * Initialize all agents
  * Call this on application startup
  */
 export async function initializeAllAgents(): Promise<void> {
-  console.log('Initializing agents...');
+  logger.info('Initializing agents...');
 
   await Promise.all([
     // V1.0 Core Agents
@@ -42,14 +43,14 @@ export async function initializeAllAgents(): Promise<void> {
     initializeImpactAgent(),
   ]);
 
-  console.log('All agents initialized');
+  logger.info('All agents initialized');
 }
 
 /**
  * Initialize only V1.0 core agents
  */
 export async function initializeCoreAgents(): Promise<void> {
-  console.log('Initializing core agents...');
+  logger.info('Initializing core agents...');
 
   await Promise.all([
     initializeRequirementAgent(),
@@ -57,5 +58,5 @@ export async function initializeCoreAgents(): Promise<void> {
     initializeTaskAgent(),
   ]);
 
-  console.log('Core agents initialized');
+  logger.info('Core agents initialized');
 }

@@ -20,6 +20,7 @@ import { sessionMemoryService } from '../services/SessionMemoryService';
 import { kvMemoryService } from '../services/KVMemoryService';
 import { ValidationError } from '@andos/shared-errors';
 import type { MemoryLevel } from '../types/memory';
+import { logger } from '../utils/logger';
 
 // ============================================================================
 // MCP Protocol Types
@@ -98,7 +99,7 @@ class SSEConnectionManager {
       reply.raw.write(`data: ${eventData}\n\n`);
       return true;
     } catch (error) {
-      console.error('Failed to send SSE event:', error);
+      logger.error('Failed to send SSE event:', error);
       return false;
     }
   }

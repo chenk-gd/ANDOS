@@ -7,6 +7,7 @@
 
 import { db, withTransaction } from '../db/connection';
 import { webhookService } from './WebhookService';
+import { logger } from '../utils/logger';
 import {
   Asset,
   AssetState,
@@ -517,7 +518,7 @@ export class AssetService {
       // TODO: Replace with proper logger when available
       // Silently fail - webhook errors should not affect asset operations
       // eslint-disable-next-line no-console
-      console.error('[AssetService] Failed to trigger dirty webhook:', error);
+      logger.error('[AssetService] Failed to trigger dirty webhook:', error);
     }
   }
 
@@ -652,7 +653,7 @@ export class AssetService {
         { projectId: asset.project_id }
       );
     } catch (error) {
-      console.error('[AssetService] Failed to trigger published webhook:', error);
+      logger.error('[AssetService] Failed to trigger published webhook:', error);
     }
 
     return updated;
@@ -838,7 +839,7 @@ export class AssetService {
           { projectId: upstreamAsset?.project_id }
         );
       } catch (error) {
-        console.error('[AssetService] Failed to trigger dirty_batch webhook:', error);
+        logger.error('[AssetService] Failed to trigger dirty_batch webhook:', error);
       }
     }
   }
