@@ -74,8 +74,6 @@ export abstract class BaseAgent {
    * Log message with agent prefix
    */
   protected log(message: string): void {
-    // TODO: Replace with proper logger when available
-    // For now, only log in development
     if (process.env.NODE_ENV === 'development') {
       logger.debug(`[${this.config.name}] ${message}`);
     }
@@ -96,7 +94,6 @@ export async function autoInitializeAgent(agent: BaseAgent): Promise<void> {
       await agent.initialize();
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      // TODO: Replace with proper logger
       logger.error(`Failed to initialize ${agent.getSlug()}:`, errorMessage);
     }
   }

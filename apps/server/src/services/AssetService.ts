@@ -515,9 +515,7 @@ export class AssetService {
         { projectId: asset.project_id }
       );
     } catch (error) {
-      // TODO: Replace with proper logger when available
       // Silently fail - webhook errors should not affect asset operations
-      // eslint-disable-next-line no-console
       logger.error('[AssetService] Failed to trigger dirty webhook:', error);
     }
   }
