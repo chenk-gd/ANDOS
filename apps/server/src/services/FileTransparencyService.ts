@@ -467,7 +467,7 @@ export class FileTransparencyService {
    * Parse key-value list from markdown
    */
   private parseKeyValueList(content: string): Record<string, string | number | boolean> {
-    const result: Record<string, any> = {};
+    const result: Record<string, string | number | boolean> = {};
     const lines = content.split('\n');
 
     for (const line of lines) {
@@ -519,7 +519,7 @@ export class FileTransparencyService {
    * Parse language-specific settings
    */
   private parseLanguageSpecific(content: string): Record<string, Record<string, string | number | boolean>> {
-    const result: Record<string, any> = {};
+    const result: Record<string, Record<string, string | number | boolean>> = {};
     const lines = content.split('\n');
     let currentLang: string | null = null;
 
@@ -552,7 +552,7 @@ export class FileTransparencyService {
    * Parse API patterns from markdown
    */
   private parseAPIPatterns(content: string): APIPattern[] {
-    const patterns: any[] = [];
+    const patterns: APIPattern[] = [];
     const sections = content.split(/### (.+)\n/).slice(1);
 
     for (let i = 0; i < sections.length; i += 2) {
@@ -593,7 +593,7 @@ export class FileTransparencyService {
    * Parse common errors from markdown
    */
   private parseCommonErrors(content: string): CommonError[] {
-    const errors: any[] = [];
+    const errors: CommonError[] = [];
     const sections = content.split(/### (.+)\n/).slice(1);
 
     for (let i = 0; i < sections.length; i += 2) {
@@ -632,7 +632,7 @@ export class FileTransparencyService {
    * Parse team conventions from markdown
    */
   private parseTeamConventions(content: string): TeamConvention[] {
-    const conventions: any[] = [];
+    const conventions: TeamConvention[] = [];
     const lines = content.split('\n');
 
     for (let i = 0; i < lines.length; i++) {
@@ -664,7 +664,7 @@ export class FileTransparencyService {
    * Parse architecture decisions from markdown
    */
   private parseArchitectureDecisions(content: string): ArchitectureDecision[] {
-    const decisions: any[] = [];
+    const decisions: ArchitectureDecision[] = [];
     const sections = content.split(/### (.+)\n/).slice(1);
 
     for (let i = 0; i < sections.length; i += 2) {
