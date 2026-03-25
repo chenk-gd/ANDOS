@@ -13,7 +13,7 @@
     "db:seed": "knex seed:run",
     "test": "cross-env NODE_ENV=test vitest",
     "test:unit": "cross-env NODE_ENV=test vitest run tests/unit",
-    "test:integration": "cross-env NODE_ENV=test vitest run tests/integration",
+    "test:integration": "cross-env NODE_ENV=test vitest run --config vitest.integration.config.ts",
     "test:coverage": "cross-env NODE_ENV=test vitest run --coverage"
   },
   "dependencies": {

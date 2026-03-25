@@ -6,16 +6,16 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { withTestTransaction } from '../../helpers/db';
+import { withTestTransaction } from '~/helpers/db';
 import {
   createTestTaskWithStatus,
   createTestTask,
   createTaskRoutingHistory,
   TEST_IDS,
-} from '../../fixtures/tasks';
-import { taskService } from '../../../src/services/TaskService';
-import { eventBus } from '../../../src/services/EventBus';
-import { db } from '../../../src/db/connection';
+} from '~/fixtures/tasks';
+import { taskService } from '@/services/TaskService';
+import { eventBus } from '@/services/EventBus';
+import { db } from '@/db/connection';
 
 describe('Task Retry and Failure Handling Integration', () => {
   const subscriptions: Array<() => void> = [];

@@ -4,8 +4,8 @@
  */
 
 import { describe, it, expect, beforeEach } from 'vitest';
-import { assetService, AssetNotFoundError, DuplicateSlugError, AssetHasDependenciesError } from '../../../src/services/AssetService';
-import { withTestTransaction, createTestTransaction } from '../../helpers/db';
+import { assetService, AssetNotFoundError, DuplicateSlugError, AssetHasDependenciesError } from '@/services/AssetService';
+import { withTestTransaction, createTestTransaction } from '~/helpers/db';
 import {
   createTestAsset,
   createTestVersion,
@@ -14,7 +14,7 @@ import {
   createTestAssetWithPath,
   createAssetInput,
   TEST_IDS,
-} from '../../fixtures/assets';
+} from '~/fixtures/assets';
 import type { Knex } from 'knex';
 
 describe('AssetService', () => {

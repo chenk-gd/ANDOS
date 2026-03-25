@@ -6,14 +6,14 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { withTestTransaction } from '../../helpers/db';
+import { withTestTransaction } from '~/helpers/db';
 import {
   createTestTaskWithStatus,
   createTestTasks,
   TEST_IDS,
-} from '../../fixtures/tasks';
-import { taskService } from '../../../src/services/TaskService';
-import { eventBus } from '../../../src/services/EventBus';
+} from '~/fixtures/tasks';
+import { taskService } from '@/services/TaskService';
+import { eventBus } from '@/services/EventBus';
 
 describe('Task Batch Review Integration', () => {
   const subscriptions: Array<() => void> = [];

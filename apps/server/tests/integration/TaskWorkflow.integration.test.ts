@@ -6,7 +6,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { withTestTransaction } from '../../helpers/db';
+import { withTestTransaction } from '~/helpers/db';
 import {
   createTestTask,
   createTestTasks,
@@ -15,12 +15,12 @@ import {
   createDirtySource,
   TEST_IDS,
   type TaskAsset,
-} from '../../fixtures/tasks';
-import { createTestAsset } from '../../fixtures/assets';
-import { taskService } from '../../../src/services/TaskService';
-import { taskRouterAgent } from '../../../src/agents/TaskRouterAgent';
-import { eventBus } from '../../../src/services/EventBus';
-import { db } from '../../../src/db/connection';
+} from '~/fixtures/tasks';
+import { createTestAsset } from '~/fixtures/assets';
+import { taskService } from '@/services/TaskService';
+import { taskRouterAgent } from '@/agents/TaskRouterAgent';
+import { eventBus } from '@/services/EventBus';
+import { db } from '@/db/connection';
 
 describe('Task Workflow Integration', () => {
   // Track subscriptions for cleanup
