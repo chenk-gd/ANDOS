@@ -18,6 +18,7 @@ import agentRoutes from './routes/agents';
 import graphRoutes from './routes/graph';
 import webhookRoutes from './routes/webhooks';
 import memoryRoutes from './routes/memory';
+import taskRoutes from './routes/tasks';
 import { orgRoutes } from './routes/orgs';
 import { userRoutes } from './routes/users';
 import { projectRoutes } from './routes/projects';
@@ -108,6 +109,7 @@ async function start(): Promise<void> {
     await server.register(graphRoutes, { prefix: '/v1/assets' });
     await server.register(webhookRoutes, { prefix: '/v1/webhooks' });
     await server.register(memoryRoutes, { prefix: '/v1/memory' });
+    await server.register(taskRoutes, { prefix: '/v1/tasks' });
 
     // Organization & RBAC routes
     await server.register(orgRoutes, { prefix: '/v1/orgs' });
