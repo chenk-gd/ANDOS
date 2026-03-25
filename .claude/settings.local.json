@@ -28,7 +28,8 @@
       "Bash(npm test:*)",
       "Bash(npm ls:*)",
       "Bash(find . -path */llm/* -type f)",
-      "Bash(find tests:*)"
+      "Bash(find tests:*)",
+      "mcp__plugin_context-mode_context-mode__ctx_search"
     ]
   }
 }

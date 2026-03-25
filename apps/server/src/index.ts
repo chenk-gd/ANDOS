@@ -25,6 +25,7 @@ import { projectMemberRoutes } from './routes/projectMembers';
 import { authMiddleware } from './middleware/auth';
 import { fieldFilteringHook } from './utils/fieldFiltering';
 import { setGlobalLogger } from './utils/logger';
+import { initializeAllAgents } from './agents/index';
 
 dotenv.config();
 
@@ -95,6 +96,9 @@ server.get('/health', async () => {
 async function start(): Promise<void> {
   try {
     await registerPlugins();
+
+    // Initialize all agents on startup (per design spec)
+    await initializeAllAgents();
 
     // Register routes
     await server.register(assetRoutes, { prefix: '/v1/assets' });

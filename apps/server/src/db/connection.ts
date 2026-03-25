@@ -17,8 +17,8 @@ if (!knexConfig) {
 // Create singleton connection
 export const db: Knex = knex(knexConfig);
 
-// Health check function
-export async function checkConnection(): Promise<boolean> {
+// Health check function (not exported - for future use)
+async function checkConnection(): Promise<boolean> {
   try {
     await db.raw('SELECT 1');
     return true;
@@ -28,8 +28,8 @@ export async function checkConnection(): Promise<boolean> {
   }
 }
 
-// Graceful shutdown
-export async function closeConnection(): Promise<void> {
+// Graceful shutdown (not exported - for future use)
+async function closeConnection(): Promise<void> {
   await db.destroy();
 }
 
@@ -40,8 +40,8 @@ export async function withTransaction<T>(
   return await db.transaction(callback);
 }
 
-// Connection pool stats
-export function getPoolStats(): { min: number; max: number; used: number; free: number } {
+// Connection pool stats (not exported - for future use)
+function getPoolStats(): { min: number; max: number; used: number; free: number } {
   const client = db.client;
   if (client.pool) {
     return {
