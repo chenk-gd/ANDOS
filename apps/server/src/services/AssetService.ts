@@ -7,6 +7,7 @@
 
 import { db, withTransaction } from '../db/connection';
 import { webhookService } from './WebhookService';
+import { eventBus } from './EventBus';
 import { logger } from '../utils/logger';
 import {
   Asset,
@@ -653,6 +654,27 @@ export class AssetService {
     } catch (error) {
       logger.error('[AssetService] Failed to trigger published webhook:', error);
     }
+
+    // Publish event for workflow orchestration (Phase 9)
+    eventBus.publish(
+      'asset.version.published',
+      {
+        asset_id: assetId,
+        asset_name: asset.name,
+        asset_type: asset.type,
+        project_id: asset.project_id,
+        version: version,
+        previous_version: asset.current_version,
+        published_by: publishedBy,
+        timestamp: new Date().toISOString(),
+      },
+      {
+        source: 'AssetService',
+        projectId: asset.project_id,
+      }
+    ).catch((error) => {
+      logger.error('[AssetService] Failed to publish event:', error);
+    });
 
     return updated;
   }
