@@ -54,9 +54,31 @@
 |------|------|----------|----------|
 | **Primary** | 主助手，用户直接交互 | Tab 切换、默认激活 | Build、Plan、Chat |
 | **Subagent** | 专项代理，处理特定任务 | `@name` 调用、自动触发 | CodeReview、DocGen、TestGen |
+| **Workflow** | 工作流编排 Agent | 事件驱动 | TaskGenerator, TaskRouter |
 | **Skill** | 工具能力，可被 Agent 调用 | Tool call | fetch_asset、query_dag |
 
-### 2.1.1 Subagent 安全边界与上下文继承规则
+### 2.1.2 Workflow Agent 类型
+
+**Workflow Agent** 是事件驱动的编排 Agent，负责自动化工作流中的特定环节：
+
+| Agent | 职责 | 输入 | 输出 | 触发事件 |
+|-------|------|------|------|----------|
+| **ImpactAgent** | 影响分析 | 版本变更 | 影响报告 | `asset.version.published` |
+| **TaskGeneratorAgent** | 生成工作项 | 影响报告 | Task 列表 | `impact.analysis.completed` |
+| **TaskRouterAgent** | 任务路由 | Task | Agent 分配建议 | `task.approved` |
+
+**工作流编排流程：**
+
+```mermaid
+flowchart LR
+    A[设计变更] --> B[ImpactAgent]
+    B --> C[TaskGeneratorAgent]
+    C --> D[人工审查]
+    D --> E[TaskRouterAgent]
+    E --> F[CodeAgent/TestAgent]
+```
+
+### 2.1.3 Subagent 安全边界与上下文继承规则
 
 Subagent 默认采用**严格隔离策略**，防止权限逃逸：
 

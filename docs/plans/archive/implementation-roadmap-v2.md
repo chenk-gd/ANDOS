@@ -157,6 +157,14 @@
 ```
 ✅ 所有计划阶段已完成 (Phase 1-8)
 
+Phase 9: 工作流编排 (Task Workflow Orchestration) 🆕
+  ├── 9.1 EventBus 基础设施
+  ├── 9.2 TaskGeneratorAgent
+  ├── 9.3 TaskRouterAgent
+  ├── 9.4 审查工作流
+  ├── 9.5 委托执行
+  └── 9.6 Web UI 适配
+
 可选的未来工作:
   └── 8.3 代码质量优化 (P3)
   └── 集成测试补充
@@ -171,6 +179,101 @@
 2. **错误处理**: 部分API调用缺少统一的错误处理
 3. **类型定义**: 部分any类型需要细化
 4. **测试覆盖**: 需要添加E2E测试
+
+---
+
+## Phase 9: 工作流编排 (Task Workflow Orchestration)
+
+> 目标: 实现设计变更后的自动化工作流 - 影响分析→生成工作项→人工审查→智能路由→委托执行
+> 预计工期: 20 个工作日
+> 详细设计: `docs/plans/2026-03-25-task-workflow-orchestration-design.md`
+
+### 9.1 事件系统基础设施 (3天)
+
+**状态**: ⏳ 待开始
+
+- [ ] EventBus 服务实现（基于 Node.js EventEmitter + Redis Pub/Sub）
+- [ ] 事件订阅/发布 API
+- [ ] AssetService.publishVersion() 触发 `asset.version.published` 事件
+- [ ] ImpactAgent 改为事件驱动订阅
+- [ ] dirty_sources 表扩展（关联 task_ids）
+
+**关键文件**:
+- `src/services/EventBus.ts`
+- `src/services/AssetService.ts` (修改)
+- `database/migrations/013_add_task_refs_to_dirty_sources.ts`
+
+### 9.2 TaskGeneratorAgent (3天)
+
+**状态**: ⏳ 待开始
+
+- [ ] TaskGeneratorAgent.ts 实现
+- [ ] 任务生成规则引擎（breaking/additive/behavioral 规则）
+- [ ] POST /v1/agents/task-generator/execute
+- [ ] 创建 Task 资产（复用 assets 表，type='task'）
+- [ ] 状态设为 `pending_review`
+
+**关键文件**:
+- `src/agents/TaskGeneratorAgent.ts`
+- `src/routes/agents.ts` (新增 API)
+
+### 9.3 TaskRouterAgent (3天)
+
+**状态**: ⏳ 待开始
+
+- [ ] TaskRouterAgent.ts 实现
+- [ ] 路由策略框架（类型映射、负载感知预留接口）
+- [ ] POST /v1/agents/task-router/route
+- [ ] 路由历史记录（task_routing_history 表）
+- [ ] 支持人工覆盖建议
+
+**关键文件**:
+- `src/agents/TaskRouterAgent.ts`
+- `database/migrations/014_create_task_routing_history.ts`
+
+### 9.4 审查工作流 (4天)
+
+**状态**: ⏳ 待开始
+
+- [ ] GET /v1/tasks?status=pending_review
+- [ ] POST /v1/tasks/:id/review（批准/拒绝/修改）
+- [ ] POST /v1/tasks/batch-review（批量审查）
+- [ ] 通知机制（有新工作项时通知用户）
+- [ ] Task 资产状态机实现
+
+**关键文件**:
+- `src/routes/tasks.ts` (新增路由文件)
+- `src/services/TaskService.ts`
+
+### 9.5 委托执行 (3天)
+
+**状态**: ⏳ 待开始
+
+- [ ] CodeAgent/TestAgent 改为 Subagent 模式
+- [ ] POST /v1/tasks/:id/assign（分配）
+- [ ] POST /v1/tasks/:id/delegate（委托执行）
+- [ ] 执行状态追踪（与 AgentExecutionEngine 集成）
+- [ ] 失败后退回人工/重试机制
+
+**关键文件**:
+- `src/agents/CodeAgent.ts` (修改 mode)
+- `src/agents/TestAgent.ts` (修改 mode)
+- `src/services/TaskExecutionAdapter.ts`
+
+### 9.6 Web UI 适配 (4天)
+
+**状态**: ⏳ 待开始
+
+- [ ] 工作项列表页面（待审查/已分配/已完成）
+- [ ] 工作项详情/审查页面
+- [ ] 分配选择器（显示 TaskRouter 建议 + 人工覆盖）
+- [ ] 执行进度实时查看
+- [ ] 批量操作支持
+
+**关键文件**:
+- `apps/web/src/views/TasksView.vue`
+- `apps/web/src/components/TaskReviewPanel.vue`
+- `apps/web/src/components/TaskAssignmentModal.vue`
 
 ---
 
